@@ -18,21 +18,41 @@ color:white;
 
 #map{
 height:100vh;
+width:100%;
 }
 
-.painel{
+.container{
+display:flex;
+}
+
+.painelEsquerdo{
 
 position:absolute;
 top:20px;
 left:20px;
-z-index:1000;
 
 background:#1c1c1c;
 padding:20px;
 border-radius:10px;
-width:360px;
-max-height:90vh;
+width:340px;
+z-index:1000;
+
+}
+
+.painelDireito{
+
+position:absolute;
+top:20px;
+right:20px;
+
+background:#1c1c1c;
+padding:20px;
+border-radius:10px;
+width:300px;
+max-height:85vh;
 overflow:auto;
+
+z-index:1000;
 
 }
 
@@ -40,38 +60,33 @@ input{
 
 width:100%;
 padding:10px;
-margin-top:5px;
 border:none;
 border-radius:6px;
+margin-top:5px;
 
 }
 
 button{
 
 margin-top:8px;
-padding:8px;
+padding:10px;
 border:none;
 border-radius:6px;
 cursor:pointer;
-
-}
-
-.btnAdd{
-background:#2ecc71;
-color:white;
 width:100%;
+
 }
 
-.btnRota{
-background:#3498db;
-color:white;
-width:100%;
-}
+.add{background:#2ecc71;color:white}
+.rota{background:#3498db;color:white}
 
 .btnExcluir{
+
 background:#e74c3c;
 color:white;
 margin-left:5px;
+padding:3px 6px;
+
 }
 
 .sugestoes{
@@ -92,15 +107,42 @@ background:#eee;
 }
 
 .listaItem{
-margin-top:8px;
-padding:6px;
 background:#2a2a2a;
+padding:6px;
+margin-top:6px;
 border-radius:6px;
 font-size:13px;
 }
 
-.distancias{
+.loading{
+
+display:none;
 margin-top:10px;
+text-align:center;
+
+}
+
+.spinner{
+
+border:4px solid #444;
+border-top:4px solid #2ecc71;
+border-radius:50%;
+width:30px;
+height:30px;
+animation:girar 1s linear infinite;
+margin:auto;
+
+}
+
+@keyframes girar{
+
+0%{transform:rotate(0deg)}
+100%{transform:rotate(360deg)}
+
+}
+
+.segmento{
+margin-top:6px;
 font-size:13px;
 }
 
@@ -116,21 +158,34 @@ color:#2ecc71;
 
 <body>
 
-<div class="painel">
+<div class="painelEsquerdo">
 
-<h3>Roteirizador de Visitas</h3>
+<h3>Adicionar Endereço</h3>
 
 <input id="endereco" placeholder="Digite o endereço">
 
 <div id="sugestoes" class="sugestoes"></div>
 
-<button class="btnAdd" onclick="adicionarEndereco()">Adicionar endereço</button>
+<button class="add" onclick="adicionarEndereco()">Adicionar endereço</button>
 
-<button class="btnRota" onclick="gerarRota()">Gerar rota</button>
+<button class="rota" onclick="gerarRota()">Gerar rota</button>
+
+<div class="loading" id="loading">
+
+<div class="spinner"></div>
+Calculando rota...
+
+</div>
 
 <div id="lista"></div>
 
-<div class="distancias" id="distancias"></div>
+</div>
+
+<div class="painelDireito">
+
+<h3>Detalhes da Rota</h3>
+
+<div id="detalhes"></div>
 
 <div class="total" id="total"></div>
 
@@ -149,10 +204,9 @@ var map=L.map('map').setView([-22.90,-43.20],12)
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19}).addTo(map)
 
 let pontos=[]
-let enderecos=[]
 let marcadores=[]
+let enderecos=[]
 let rota=null
-
 let enderecoSelecionado=null
 
 const input=document.getElementById("endereco")
@@ -186,9 +240,7 @@ div.innerText=local.display_name
 div.onclick=function(){
 
 enderecoSelecionado=local
-
 input.value=local.display_name
-
 sugestoes.innerHTML=""
 
 }
@@ -216,7 +268,6 @@ let marker=L.marker([lat,lon]).addTo(map)
 marker.bindPopup(enderecoSelecionado.display_name)
 
 marcadores.push(marker)
-
 pontos.push([lon,lat])
 enderecos.push(enderecoSelecionado.display_name)
 
@@ -250,13 +301,13 @@ lista.appendChild(div)
 
 }
 
-function remover(index){
+function remover(i){
 
-map.removeLayer(marcadores[index])
+map.removeLayer(marcadores[i])
 
-marcadores.splice(index,1)
-pontos.splice(index,1)
-enderecos.splice(index,1)
+marcadores.splice(i,1)
+pontos.splice(i,1)
+enderecos.splice(i,1)
 
 atualizarLista()
 
@@ -268,6 +319,8 @@ if(pontos.length<2){
 alert("Adicione pelo menos 2 endereços")
 return
 }
+
+document.getElementById("loading").style.display="block"
 
 if(rota){
 map.removeLayer(rota)
@@ -292,6 +345,8 @@ coordinates:pontos
 
 .then(data=>{
 
+document.getElementById("loading").style.display="none"
+
 let coords=data.features[0].geometry.coordinates
 
 let latlngs=coords.map(c=>[c[1],c[0]])
@@ -303,33 +358,48 @@ weight:5
 
 map.fitBounds(rota.getBounds())
 
-calcularDistancias(data)
+mostrarSegmentos(data)
 
 })
 
 }
 
-function calcularDistancias(data){
+function mostrarSegmentos(data){
 
-let segmentos=data.features[0].properties.segments
+let segmentos=data.features[0].properties.segments[0].steps
 
-let div=document.getElementById("distancias")
+let detalhes=document.getElementById("detalhes")
+
+detalhes.innerHTML=""
 
 let totalKm=0
 
-div.innerHTML="<b>Distância entre pontos:</b><br>"
-
-segmentos[0].steps.forEach((step,i)=>{
+segmentos.forEach(step=>{
 
 let km=step.distance/1000
 
-if(km>0.05){
+if(km>0.2){
 
 let custo=km*0.85
 
 totalKm+=km
 
-div.innerHTML+=`Trecho: ${km.toFixed(2)} km → R$ ${custo.toFixed(2)}<br>`
+let div=document.createElement("div")
+
+div.className="segmento"
+
+div.innerHTML=`${km.toFixed(2)} km → R$ ${custo.toFixed(2)}`
+
+detalhes.appendChild(div)
+
+let pos=map.getCenter()
+
+L.marker(pos,{
+icon:L.divIcon({
+className:"labelKm",
+html:`<div style="background:black;padding:3px;border-radius:4px;font-size:11px">${km.toFixed(1)} km</div>`
+})
+}).addTo(map)
 
 }
 
@@ -338,6 +408,7 @@ div.innerHTML+=`Trecho: ${km.toFixed(2)} km → R$ ${custo.toFixed(2)}<br>`
 let totalValor=totalKm*0.85
 
 document.getElementById("total").innerHTML=
+
 `Distância total: ${totalKm.toFixed(2)} km<br>
 Custo total: R$ ${totalValor.toFixed(2)}`
 
@@ -346,8 +417,8 @@ Custo total: R$ ${totalValor.toFixed(2)}`
 </script>
 
 </body>
-
 </html>
+
 
 
 
