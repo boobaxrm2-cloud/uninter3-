@@ -1,43 +1,71 @@
 <!DOCTYPE html>
-<html>
+<html lang="pt-br">
 <head>
 <meta charset="utf-8">
 <title>Roteirizador Logístico</title>
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
 
+<script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+
 <style>
 
 body{
+margin:0;
 font-family:Arial;
-margin:20px;
+display:flex;
+height:100vh;
+background:#f5f6fa;
+}
+
+#sidebar{
+width:380px;
+background:white;
+padding:20px;
+overflow:auto;
+box-shadow:2px 0 8px rgba(0,0,0,0.1);
 }
 
 #map{
-height:500px;
-margin-top:20px;
+flex:1;
 }
 
-.inputBox{
-margin:5px 0;
+h2{
+margin-top:0;
 }
 
 input{
-width:350px;
-padding:6px;
+width:100%;
+padding:8px;
+margin-bottom:5px;
+border-radius:6px;
+border:1px solid #ccc;
 }
 
 button{
-padding:8px 12px;
-margin:5px;
+padding:10px;
+border:none;
+border-radius:6px;
+margin-top:5px;
 cursor:pointer;
+font-weight:bold;
+}
+
+.btn-main{
+background:black;
+color:white;
+}
+
+.btn-secondary{
+background:#e4e6eb;
 }
 
 .suggestions{
 background:white;
 border:1px solid #ccc;
-max-width:350px;
-position:absolute;
+max-height:120px;
+overflow:auto;
+position:relative;
 z-index:1000;
 }
 
@@ -52,7 +80,32 @@ background:#eee;
 
 #resultado{
 margin-top:10px;
-font-size:18px;
+font-size:16px;
+}
+
+#loading{
+display:none;
+text-align:center;
+margin-top:10px;
+}
+
+.spinner{
+border:6px solid #f3f3f3;
+border-top:6px solid black;
+border-radius:50%;
+width:40px;
+height:40px;
+animation:spin 1s linear infinite;
+margin:auto;
+}
+
+@keyframes spin{
+0%{transform:rotate(0deg);}
+100%{transform:rotate(360deg);}
+}
+
+.parada{
+margin-bottom:10px;
 }
 
 </style>
@@ -60,15 +113,28 @@ font-size:18px;
 
 <body>
 
-<h2>Roteirizador Logístico</h2>
+<div id="sidebar">
+
+<h2>Roteirizador</h2>
 
 <div id="inputs"></div>
 
-<button onclick="addInput()">Adicionar parada</button>
-<button onclick="calcularRota()">Calcular rota</button>
-<button onclick="limparRota()">Excluir rota</button>
+<button class="btn-secondary" onclick="addInput()">+ Adicionar parada</button>
+
+<button class="btn-main" onclick="calcularRota()">Calcular rota</button>
+
+<button class="btn-secondary" onclick="limparRota()">Excluir rota</button>
+
+<button class="btn-secondary" onclick="baixarExcel()">Baixar Excel</button>
+
+<div id="loading">
+<div class="spinner"></div>
+<p>Calculando rota...</p>
+</div>
 
 <div id="resultado"></div>
+
+</div>
 
 <div id="map"></div>
 
@@ -76,9 +142,9 @@ font-size:18px;
 
 <script>
 
-const API_KEY = "eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6IjBkNDRmZDJkNmQzMTRkZWQ4YWYyZGIzODY1NzViNjA5IiwiaCI6Im11cm11cjY0In0=";
+const API_KEY="eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6IjBkNDRmZDJkNmQzMTRkZWQ4YWYyZGIzODY1NzViNjA5IiwiaCI6Im11cm11cjY0In0=";
 
-let map = L.map('map').setView([-22.90,-43.20],12);
+let map=L.map('map').setView([-22.9,-43.2],12);
 
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
 maxZoom:19
@@ -86,44 +152,44 @@ maxZoom:19
 
 let rotaLayer;
 let markers=[];
+let rotaDados=[];
 
 function addInput(){
 
-let box = document.createElement("div");
-box.className="inputBox";
+let div=document.createElement("div");
+div.className="parada";
 
-let input = document.createElement("input");
-input.placeholder="Digite um endereço";
+let input=document.createElement("input");
+input.placeholder="Digite endereço";
 
-let sug = document.createElement("div");
+let sug=document.createElement("div");
 sug.className="suggestions";
 
-input.addEventListener("input", async function(){
+input.addEventListener("input",async function(){
 
 if(input.value.length<3){
 sug.innerHTML="";
 return;
 }
 
-let url = `https://nominatim.openstreetmap.org/search?format=json&limit=5&q=${encodeURIComponent(input.value)}`;
+let url=`https://nominatim.openstreetmap.org/search?format=json&limit=5&q=${encodeURIComponent(input.value)}`;
 
-let res = await fetch(url);
-let data = await res.json();
+let res=await fetch(url);
+let data=await res.json();
 
 sug.innerHTML="";
 
-data.forEach(place=>{
+data.forEach(p=>{
 
-let item = document.createElement("div");
+let item=document.createElement("div");
 
-item.textContent = place.display_name;
+item.textContent=p.display_name;
 
-item.onclick = function(){
+item.onclick=function(){
 
-input.value = place.display_name;
-
-input.dataset.lon = place.lon;
-input.dataset.lat = place.lat;
+input.value=p.display_name;
+input.dataset.lat=p.lat;
+input.dataset.lon=p.lon;
 
 sug.innerHTML="";
 
@@ -135,10 +201,10 @@ sug.appendChild(item);
 
 });
 
-box.appendChild(input);
-box.appendChild(sug);
+div.appendChild(input);
+div.appendChild(sug);
 
-document.getElementById("inputs").appendChild(box);
+document.getElementById("inputs").appendChild(div);
 
 }
 
@@ -147,18 +213,19 @@ addInput();
 
 async function calcularRota(){
 
-let inputs = document.querySelectorAll("#inputs input");
+document.getElementById("loading").style.display="block";
+
+let inputs=document.querySelectorAll("#inputs input");
 
 let coords=[];
+let enderecos=[];
 
 inputs.forEach(i=>{
 
 if(i.dataset.lon){
 
-coords.push([
-parseFloat(i.dataset.lon),
-parseFloat(i.dataset.lat)
-]);
+coords.push([parseFloat(i.dataset.lon),parseFloat(i.dataset.lat)]);
+enderecos.push(i.value);
 
 }
 
@@ -166,13 +233,13 @@ parseFloat(i.dataset.lat)
 
 if(coords.length<2){
 
-alert("Digite pelo menos dois endereços");
-
+alert("Digite ao menos 2 endereços");
+document.getElementById("loading").style.display="none";
 return;
 
 }
 
-let res = await fetch("https://api.openrouteservice.org/v2/directions/driving-car/geojson",{
+let res=await fetch("https://api.openrouteservice.org/v2/directions/driving-car/geojson",{
 
 method:"POST",
 
@@ -181,17 +248,15 @@ headers:{
 "Authorization":API_KEY
 },
 
-body:JSON.stringify({
-coordinates:coords
-})
+body:JSON.stringify({coordinates:coords})
 
 });
 
-let data = await res.json();
+let data=await res.json();
 
 if(rotaLayer) map.removeLayer(rotaLayer);
 
-rotaLayer = L.geoJSON(data).addTo(map);
+rotaLayer=L.geoJSON(data).addTo(map);
 
 map.fitBounds(rotaLayer.getBounds());
 
@@ -200,34 +265,64 @@ markers=[];
 
 coords.forEach((c,i)=>{
 
-let m = L.marker([c[1],c[0]]).addTo(map)
-.bindPopup("Parada "+(i+1));
+let m=L.marker([c[1],c[0]]).addTo(map).bindPopup(enderecos[i]);
 
 markers.push(m);
 
 });
 
-let distancia = data.features[0].properties.summary.distance/1000;
+let distancia=data.features[0].properties.summary.distance/1000;
 
-let custo = distancia * 0.85;
+let custo=distancia*0.85;
 
-document.getElementById("resultado").innerHTML =
-
+document.getElementById("resultado").innerHTML=
 `Distância total: <b>${distancia.toFixed(2)} km</b><br>
 Custo estimado: <b>R$ ${custo.toFixed(2)}</b>`;
+
+rotaDados=[];
+
+for(let i=0;i<enderecos.length;i++){
+
+rotaDados.push({
+Ordem:i+1,
+Endereco:enderecos[i]
+});
+
+}
+
+document.getElementById("loading").style.display="none";
 
 }
 
 function limparRota(){
 
-if(rotaLayer){
-map.removeLayer(rotaLayer);
-}
+if(rotaLayer) map.removeLayer(rotaLayer);
 
 markers.forEach(m=>map.removeLayer(m));
+
 markers=[];
+rotaDados=[];
 
 document.getElementById("resultado").innerHTML="";
+
+}
+
+function baixarExcel(){
+
+if(rotaDados.length==0){
+
+alert("Calcule uma rota primeiro");
+return;
+
+}
+
+let ws=XLSX.utils.json_to_sheet(rotaDados);
+
+let wb=XLSX.utils.book_new();
+
+XLSX.utils.book_append_sheet(wb,ws,"Rota");
+
+XLSX.writeFile(wb,"rota_entregas.xlsx");
 
 }
 
@@ -235,3 +330,4 @@ document.getElementById("resultado").innerHTML="";
 
 </body>
 </html>
+
