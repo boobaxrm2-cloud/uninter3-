@@ -18,20 +18,40 @@ height:500px;
 margin-top:20px;
 }
 
-input{
-display:block;
+.inputBox{
 margin:5px 0;
-width:300px;
-padding:5px;
+}
+
+input{
+width:350px;
+padding:6px;
 }
 
 button{
-margin:5px;
 padding:8px 12px;
+margin:5px;
+cursor:pointer;
+}
+
+.suggestions{
+background:white;
+border:1px solid #ccc;
+max-width:350px;
+position:absolute;
+z-index:1000;
+}
+
+.suggestions div{
+padding:5px;
+cursor:pointer;
+}
+
+.suggestions div:hover{
+background:#eee;
 }
 
 #resultado{
-margin-top:15px;
+margin-top:10px;
 font-size:18px;
 }
 
@@ -42,17 +62,11 @@ font-size:18px;
 
 <h2>Roteirizador Logístico</h2>
 
-<div id="inputs">
+<div id="inputs"></div>
 
-<input type="text" placeholder="Endereço inicial">
-<input type="text" placeholder="Parada 1">
-<input type="text" placeholder="Parada 2">
-<input type="text" placeholder="Destino final">
-
-</div>
-
-<button onclick="adicionarEndereco()">Adicionar parada</button>
+<button onclick="addInput()">Adicionar parada</button>
 <button onclick="calcularRota()">Calcular rota</button>
+<button onclick="limparRota()">Excluir rota</button>
 
 <div id="resultado"></div>
 
@@ -64,40 +78,72 @@ font-size:18px;
 
 const API_KEY = "eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6IjBkNDRmZDJkNmQzMTRkZWQ4YWYyZGIzODY1NzViNjA5IiwiaCI6Im11cm11cjY0In0=";
 
-var map = L.map('map').setView([-22.90,-43.20],12);
+let map = L.map('map').setView([-22.90,-43.20],12);
 
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
 maxZoom:19
 }).addTo(map);
 
 let rotaLayer;
+let markers=[];
 
-function adicionarEndereco(){
+function addInput(){
+
+let box = document.createElement("div");
+box.className="inputBox";
 
 let input = document.createElement("input");
-input.type="text";
-input.placeholder="Nova parada";
+input.placeholder="Digite um endereço";
 
-document.getElementById("inputs").appendChild(input);
+let sug = document.createElement("div");
+sug.className="suggestions";
 
+input.addEventListener("input", async function(){
+
+if(input.value.length<3){
+sug.innerHTML="";
+return;
 }
 
-async function geocode(endereco){
-
-let url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(endereco)}`;
+let url = `https://nominatim.openstreetmap.org/search?format=json&limit=5&q=${encodeURIComponent(input.value)}`;
 
 let res = await fetch(url);
-
 let data = await res.json();
 
-if(data.length==0) throw "Endereço não encontrado";
+sug.innerHTML="";
 
-return [
-parseFloat(data[0].lon),
-parseFloat(data[0].lat)
-];
+data.forEach(place=>{
+
+let item = document.createElement("div");
+
+item.textContent = place.display_name;
+
+item.onclick = function(){
+
+input.value = place.display_name;
+
+input.dataset.lon = place.lon;
+input.dataset.lat = place.lat;
+
+sug.innerHTML="";
+
+};
+
+sug.appendChild(item);
+
+});
+
+});
+
+box.appendChild(input);
+box.appendChild(sug);
+
+document.getElementById("inputs").appendChild(box);
 
 }
+
+addInput();
+addInput();
 
 async function calcularRota(){
 
@@ -105,21 +151,22 @@ let inputs = document.querySelectorAll("#inputs input");
 
 let coords=[];
 
-for(let i of inputs){
+inputs.forEach(i=>{
 
-if(i.value.trim()!=""){
+if(i.dataset.lon){
 
-let c = await geocode(i.value);
-
-coords.push(c);
+coords.push([
+parseFloat(i.dataset.lon),
+parseFloat(i.dataset.lat)
+]);
 
 }
 
-}
+});
 
 if(coords.length<2){
 
-alert("Insira pelo menos dois endereços");
+alert("Digite pelo menos dois endereços");
 
 return;
 
@@ -135,9 +182,7 @@ headers:{
 },
 
 body:JSON.stringify({
-
 coordinates:coords
-
 })
 
 });
@@ -150,16 +195,39 @@ rotaLayer = L.geoJSON(data).addTo(map);
 
 map.fitBounds(rotaLayer.getBounds());
 
-let distancia = data.features[0].properties.summary.distance / 1000;
+markers.forEach(m=>map.removeLayer(m));
+markers=[];
+
+coords.forEach((c,i)=>{
+
+let m = L.marker([c[1],c[0]]).addTo(map)
+.bindPopup("Parada "+(i+1));
+
+markers.push(m);
+
+});
+
+let distancia = data.features[0].properties.summary.distance/1000;
 
 let custo = distancia * 0.85;
 
-document.getElementById("resultado").innerHTML=
+document.getElementById("resultado").innerHTML =
 
-`
-Distância total: <b>${distancia.toFixed(2)} km</b><br>
-Custo estimado: <b>R$ ${custo.toFixed(2)}</b>
-`;
+`Distância total: <b>${distancia.toFixed(2)} km</b><br>
+Custo estimado: <b>R$ ${custo.toFixed(2)}</b>`;
+
+}
+
+function limparRota(){
+
+if(rotaLayer){
+map.removeLayer(rotaLayer);
+}
+
+markers.forEach(m=>map.removeLayer(m));
+markers=[];
+
+document.getElementById("resultado").innerHTML="";
 
 }
 
