@@ -8,118 +8,272 @@
 
 <style>
 
-body{
-background:#000;
-font-family:Arial;
-color:white;
-margin:0;
+*{
+box-sizing:border-box;
 }
 
+body{
+margin:0;
+font-family: 'Segoe UI', Arial;
+background:#000;
+color:white;
+overflow:hidden;
+}
+
+/* MAPA */
+
+#map{
+position:absolute;
+top:0;
+left:0;
+width:100%;
+height:100%;
+z-index:1;
+}
+
+/* PAINEL */
+
 .container{
-width:420px;
+
 position:absolute;
 top:20px;
 left:20px;
-background:#111;
-padding:20px;
-border-radius:12px;
-box-shadow:0 0 25px rgba(0,150,255,0.5);
-z-index:999;
+width:380px;
+
+background:rgba(10,10,10,0.92);
+
+backdrop-filter:blur(10px);
+
+border-radius:14px;
+
+padding:22px;
+
+box-shadow:
+0 0 25px rgba(0,150,255,0.25),
+0 0 60px rgba(0,150,255,0.15);
+
+z-index:1000;
+
 }
+
+/* TITULO */
 
 h2{
+
 margin-top:0;
+font-weight:600;
+letter-spacing:1px;
 }
 
+/* INPUTS */
+
 .input-group{
+
 display:flex;
 align-items:center;
 margin-bottom:10px;
 position:relative;
+
 }
 
 input{
+
 flex:1;
-padding:10px;
-border-radius:6px;
+
+padding:11px;
+
+border-radius:8px;
+
 border:none;
-background:linear-gradient(145deg,#1c3c60,#0b223c);
+
+background:#0f2238;
+
 color:white;
+
 outline:none;
+
+font-size:14px;
+
+transition:all .25s;
+
 }
+
+input:focus{
+
+background:#13345a;
+
+box-shadow:0 0 8px #0078ff;
+
+}
+
+/* LIXEIRA */
 
 .trash{
+
 margin-left:6px;
+
 cursor:pointer;
-color:#ff5c5c;
+
 font-size:18px;
+
+color:#ff6262;
+
+transition:.2s;
+
 }
 
+.trash:hover{
+
+transform:scale(1.2);
+
+color:#ff2e2e;
+
+}
+
+/* BOTÕES */
+
 button{
+
 width:100%;
+
 margin-top:8px;
-padding:10px;
+
+padding:12px;
+
 border:none;
-border-radius:6px;
-background:#0078ff;
+
+border-radius:8px;
+
+background:linear-gradient(90deg,#0078ff,#00a2ff);
+
 color:white;
+
 cursor:pointer;
-font-weight:bold;
+
+font-weight:600;
+
+font-size:14px;
+
+transition:.25s;
+
 }
 
 button:hover{
-background:#00a2ff;
+
+transform:translateY(-2px);
+
+box-shadow:0 6px 18px rgba(0,150,255,0.5);
+
 }
 
-#map{
-height:100vh;
-}
+/* SUGESTÕES */
 
 .suggestions{
+
 position:absolute;
-top:38px;
+
+top:42px;
+
 left:0;
-right:30px;
-background:#0c1e32;
-border-radius:6px;
+
+right:28px;
+
+background:#0a1a2c;
+
+border-radius:8px;
+
 max-height:160px;
+
 overflow-y:auto;
+
 z-index:1000;
+
+box-shadow:0 8px 25px rgba(0,0,0,0.6);
+
+animation:fade .15s;
+
 }
 
 .suggestion{
-padding:8px;
+
+padding:10px;
+
 cursor:pointer;
+
+font-size:13px;
+
+transition:.15s;
+
 }
 
 .suggestion:hover{
+
 background:#0078ff;
+
 }
 
-.loading{
-display:none;
-text-align:center;
+@keyframes fade{
+
+from{opacity:0; transform:translateY(-5px);}
+
+to{opacity:1;}
+
+}
+
+/* RESULTADO */
+
+#result{
+
 margin-top:10px;
+
+font-size:13px;
+
+line-height:1.4;
+
+}
+
+/* LOADING */
+
+.loading{
+
+display:none;
+
+text-align:center;
+
+margin-top:12px;
+
 }
 
 .spinner{
-border:4px solid #222;
-border-top:4px solid #00a2ff;
-border-radius:50%;
+
 width:30px;
+
 height:30px;
+
+border-radius:50%;
+
+border:4px solid #222;
+
+border-top:4px solid #00a2ff;
+
 animation:spin 1s linear infinite;
+
 margin:auto;
+
 }
 
 @keyframes spin{
+
 100%{transform:rotate(360deg);}
+
 }
 
 </style>
 </head>
 
 <body>
+
+<div id="map"></div>
 
 <div class="container">
 
@@ -128,7 +282,9 @@ margin:auto;
 <div id="inputs"></div>
 
 <button onclick="addInput()">+ Adicionar parada</button>
-<button onclick="optimizeRoute()">Roteirizar Melhor Rota</button>
+
+<button onclick="calculateRoute()">Roteirizar Melhor Rota</button>
+
 <button onclick="downloadExcel()">Baixar Excel</button>
 
 <div class="loading" id="loading">
@@ -140,24 +296,20 @@ margin:auto;
 
 </div>
 
-<div id="map"></div>
-
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 
 <script>
 
 const apiKey="eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6IjBkNDRmZDJkNmQzMTRkZWQ4YWYyZGIzODY1NzViNjA5IiwiaCI6Im11cm11cjY0In0=";
 
-let map=L.map('map').setView([-22.9,-43.2],11);
+let map=L.map('map').setView([-22.9,-43.2],12);
 
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
 maxZoom:19
 }).addTo(map);
 
-let markers=[];
 let routeLayer;
 let routeData=[];
-let debounce;
 
 function addInput(){
 
@@ -165,20 +317,10 @@ let div=document.createElement("div");
 div.className="input-group";
 
 div.innerHTML=`
-<input type="text" placeholder="Digite um endereço">
+<input type="text" oninput="autocomplete(this)">
 <span class="trash" onclick="removeInput(this)">🗑</span>
 <div class="suggestions"></div>
 `;
-
-let input=div.querySelector("input");
-
-input.addEventListener("input",()=>{
-
-clearTimeout(debounce);
-
-debounce=setTimeout(()=>searchAddress(input),400);
-
-});
 
 document.getElementById("inputs").appendChild(div);
 
@@ -191,13 +333,13 @@ el.parentElement.remove();
 addInput();
 addInput();
 
-async function searchAddress(input){
+async function autocomplete(input){
 
-let q=input.value;
+let query=input.value;
 
-if(q.length<3)return;
+if(query.length<3)return;
 
-let url=`https://api.openrouteservice.org/geocode/autocomplete?api_key=${apiKey}&text=${encodeURIComponent(q)}`;
+let url=`https://api.openrouteservice.org/geocode/autocomplete?api_key=${apiKey}&text=${query}`;
 
 let res=await fetch(url);
 let data=await res.json();
@@ -205,21 +347,17 @@ let data=await res.json();
 let box=input.parentElement.querySelector(".suggestions");
 box.innerHTML="";
 
-data.features.forEach(p=>{
+data.features.forEach(f=>{
 
 let div=document.createElement("div");
 div.className="suggestion";
-div.innerText=p.properties.label;
+div.innerText=f.properties.label;
 
 div.onclick=()=>{
-
-input.value=p.properties.label;
-
-input.dataset.lat=p.geometry.coordinates[1];
-input.dataset.lng=p.geometry.coordinates[0];
-
+input.value=f.properties.label;
+input.dataset.lng=f.geometry.coordinates[0];
+input.dataset.lat=f.geometry.coordinates[1];
 box.innerHTML="";
-
 };
 
 box.appendChild(div);
@@ -228,35 +366,19 @@ box.appendChild(div);
 
 }
 
-async function optimizeRoute(){
+async function calculateRoute(){
 
 document.getElementById("loading").style.display="block";
-
-markers.forEach(m=>map.removeLayer(m));
-markers=[];
 
 let inputs=document.querySelectorAll("#inputs input");
 
 let coords=[];
 
-for(let i of inputs){
+inputs.forEach(i=>{
+coords.push([parseFloat(i.dataset.lng),parseFloat(i.dataset.lat)]);
+});
 
-if(!i.dataset.lat){
-alert("Selecione o endereço na lista.");
-return;
-}
-
-coords.push([
-parseFloat(i.dataset.lng),
-parseFloat(i.dataset.lat)
-]);
-
-}
-
-let body={
-coordinates:coords,
-format:"geojson"
-};
+let body={coordinates:coords};
 
 let res=await fetch("https://api.openrouteservice.org/v2/directions/driving-car",{
 method:"POST",
@@ -271,25 +393,31 @@ let data=await res.json();
 
 document.getElementById("loading").style.display="none";
 
+let geometry=data.routes[0].geometry;
+
 if(routeLayer)map.removeLayer(routeLayer);
 
-routeLayer=L.geoJSON(data,{
-style:{color:"#00a2ff",weight:5}
+routeLayer=L.geoJSON({
+"type":"Feature",
+"geometry":geometry
 }).addTo(map);
 
 map.fitBounds(routeLayer.getBounds());
 
-let segments=data.features[0].properties.segments;
+let segments=data.routes[0].segments[0].steps;
 
 routeData=[];
 let result="";
+let totalKm=0;
 
-segments.forEach((seg,i)=>{
+segments.forEach((s,i)=>{
 
-let km=seg.distance/1000;
+let km=s.distance/1000;
 let cost=km*0.85;
 
-let address=inputs[i+1].value;
+totalKm+=km;
+
+let address=document.querySelectorAll("#inputs input")[i].value;
 
 routeData.push({
 ordem:i+1,
@@ -299,25 +427,14 @@ cost:cost
 });
 
 result+=`
-<p>
-${i+1} - ${address}<br>
+<p>${i+1} - ${address}<br>
 Distância: ${km.toFixed(2)} km<br>
-Custo: R$ ${cost.toFixed(2)}
-</p>
+Custo: R$ ${cost.toFixed(2)}</p>
 `;
 
 });
 
 document.getElementById("result").innerHTML=result;
-
-coords.forEach((c,i)=>{
-
-let m=L.marker([c[1],c[0]]).addTo(map)
-.bindPopup((i+1)+" - "+inputs[i].value);
-
-markers.push(m);
-
-});
 
 }
 
@@ -345,6 +462,7 @@ a.click();
 
 </body>
 </html>
+
 
 
 
