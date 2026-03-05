@@ -16,7 +16,7 @@ font-family:Segoe UI;
 display:flex;
 height:100vh;
 background:#0f1117;
-color:blue;
+color:white;
 }
 
 #sidebar{
@@ -46,15 +46,21 @@ position:relative;
 
 input{
 flex:1;
-padding:9px;
+padding:10px;
 border-radius:6px;
 border:none;
-background:linear-gradient(145deg,#1c2a3a,#243a55);
+background:linear-gradient(135deg,#1f3a5f,#2d5f8f);
 color:white;
+transition:all .25s;
+}
+
+input:focus{
+outline:none;
+box-shadow:0 0 8px #00e5ff;
 }
 
 input::placeholder{
-color:#a8c7ff;
+color:#b8d6ff;
 }
 
 button{
@@ -78,6 +84,7 @@ color:white;
 .btn-delete{
 background:transparent;
 font-size:18px;
+cursor:pointer;
 }
 
 .btn-delete:hover{
@@ -85,13 +92,13 @@ color:#ff4d4d;
 }
 
 .suggestions{
-background:#1e2430;
-border:1px solid #444;
+background:#1b2230;
+border:1px solid #333;
 border-radius:6px;
 max-height:150px;
 overflow:auto;
 position:absolute;
-top:40px;
+top:42px;
 left:0;
 right:30px;
 z-index:1000;
@@ -107,14 +114,14 @@ transform:translateY(0);
 }
 
 .suggestions div{
-padding:7px;
+padding:8px;
 cursor:pointer;
 transition:all .2s;
 }
 
 .suggestions div:hover{
-background:#2b3243;
-padding-left:12px;
+background:#2d374f;
+padding-left:14px;
 }
 
 #resultado{
@@ -199,7 +206,7 @@ input.placeholder="Digite endereço";
 
 let deleteBtn=document.createElement("button");
 deleteBtn.className="btn-delete";
-deleteBtn.innerHTML="🗑️";
+deleteBtn.innerHTML="🗑";
 deleteBtn.onclick=()=>div.remove();
 
 let sug=document.createElement("div");
@@ -281,7 +288,7 @@ document.getElementById("loading").style.display="none";
 return;
 }
 
-let res=await fetch("https://api.openrouteservice.org/v2/directions/driving-car/geojson",{
+let res=await fetch("https://api.openrouteservice.org/v2/directions/driving-car",{
 
 method:"POST",
 
@@ -290,15 +297,21 @@ headers:{
 "Authorization":API_KEY
 },
 
-body:JSON.stringify({coordinates:coords})
+body:JSON.stringify({
+coordinates:coords
+})
 
 });
 
 let data=await res.json();
 
+let geometry=data.routes[0].geometry;
+
+let decoded=decodePolyline(geometry);
+
 if(rotaLayer) map.removeLayer(rotaLayer);
 
-rotaLayer=L.geoJSON(data).addTo(map);
+rotaLayer=L.polyline(decoded,{color:"#00e5ff"}).addTo(map);
 
 map.fitBounds(rotaLayer.getBounds());
 
@@ -313,36 +326,33 @@ markers.push(m);
 
 });
 
-let legs=data.features[0].properties.segments[0].steps;
+let segments=data.routes[0].segments;
 
 rotaDados=[];
-
 let distanciaTotal=0;
 
-for(let i=0;i<coords.length;i++){
+segments.forEach((seg,i)=>{
 
-let dist=0;
-
-if(i>0){
-
-dist=data.features[0].properties.segments[0].distance/(coords.length-1)/1000;
-
-}
-
+let dist=seg.distance/1000;
 let custo=dist*0.85;
 
 distanciaTotal+=dist;
 
 rotaDados.push({
-
-Ordem:i+1,
-Endereco:enderecos[i],
+Ordem:i+2,
+Endereco:enderecos[i+1],
 Distancia_km:dist.toFixed(2),
 Custo_R$:custo.toFixed(2)
+});
 
 });
 
-}
+rotaDados.unshift({
+Ordem:1,
+Endereco:enderecos[0],
+Distancia_km:"0",
+Custo_R$:"0"
+});
 
 let custoTotal=distanciaTotal*0.85;
 
@@ -383,10 +393,49 @@ XLSX.writeFile(wb,"rota_logistica.xlsx");
 
 }
 
+function decodePolyline(encoded){
+
+let points=[];
+let index=0,lat=0,lng=0;
+
+while(index<encoded.length){
+
+let b,shift=0,result=0;
+
+do{
+b=encoded.charCodeAt(index++)-63;
+result|=(b&0x1f)<<shift;
+shift+=5;
+}while(b>=0x20);
+
+let dlat=((result&1)?~(result>>1):(result>>1));
+lat+=dlat;
+
+shift=0;
+result=0;
+
+do{
+b=encoded.charCodeAt(index++)-63;
+result|=(b&0x1f)<<shift;
+shift+=5;
+}while(b>=0x20);
+
+let dlng=((result&1)?~(result>>1):(result>>1));
+lng+=dlng;
+
+points.push([lat/1E5,lng/1E5]);
+
+}
+
+return points;
+
+}
+
 </script>
 
 </body>
 </html>
+
 
 
 
