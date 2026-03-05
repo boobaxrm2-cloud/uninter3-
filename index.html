@@ -1,70 +1,38 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html>
 <head>
-<meta charset="UTF-8">
-<title>Planejador de Rotas</title>
+<meta charset="utf-8">
+<title>Roteirizador Logístico</title>
 
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
 
 <style>
 
 body{
 font-family:Arial;
-margin:0;
-background:#f2f2f2;
-}
-
-header{
-background:#1f1f1f;
-color:white;
-padding:15px;
-text-align:center;
-font-size:22px;
-}
-
-#controls{
-background:white;
-padding:15px;
-display:flex;
-flex-direction:column;
-gap:10px;
-box-shadow:0 2px 6px rgba(0,0,0,0.2);
-}
-
-.parada{
-display:flex;
-gap:10px;
-}
-
-input{
-flex:1;
-padding:10px;
-font-size:15px;
-border-radius:5px;
-border:1px solid #ccc;
-}
-
-button{
-padding:10px;
-font-size:14px;
-border:none;
-border-radius:5px;
-background:#2c7be5;
-color:white;
-cursor:pointer;
-}
-
-button:hover{
-background:#1a5ec8;
+margin:20px;
 }
 
 #map{
-height:60vh;
+height:500px;
+margin-top:20px;
+}
+
+input{
+display:block;
+margin:5px 0;
+width:300px;
+padding:5px;
+}
+
+button{
+margin:5px;
+padding:8px 12px;
 }
 
 #resultado{
-background:white;
-padding:15px;
+margin-top:15px;
+font-size:18px;
 }
 
 </style>
@@ -72,146 +40,126 @@ padding:15px;
 
 <body>
 
-<header>
-Planejador de Rotas
-</header>
+<h2>Roteirizador Logístico</h2>
 
-<div id="controls">
+<div id="inputs">
 
-<div id="enderecos"></div>
-
-<button onclick="addEndereco()">+ Adicionar parada</button>
-
-<button onclick="calcularRota()">Calcular rota</button>
+<input type="text" placeholder="Endereço inicial">
+<input type="text" placeholder="Parada 1">
+<input type="text" placeholder="Parada 2">
+<input type="text" placeholder="Destino final">
 
 </div>
 
-<div id="map"></div>
+<button onclick="adicionarEndereco()">Adicionar parada</button>
+<button onclick="calcularRota()">Calcular rota</button>
 
 <div id="resultado"></div>
 
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<div id="map"></div>
+
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 
 <script>
 
 const API_KEY = "eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6IjBkNDRmZDJkNmQzMTRkZWQ4YWYyZGIzODY1NzViNjA5IiwiaCI6Im11cm11cjY0In0=";
 
-const CUSTO_KM = 0.85;
-
-let map = L.map('map').setView([-22.9068,-43.1729],12);
+var map = L.map('map').setView([-22.90,-43.20],12);
 
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
-attribution:'© OpenStreetMap'
+maxZoom:19
 }).addTo(map);
 
 let rotaLayer;
 
-function addEndereco(){
+function adicionarEndereco(){
 
-let div=document.createElement("div");
-div.className="parada";
+let input = document.createElement("input");
+input.type="text";
+input.placeholder="Nova parada";
 
-div.innerHTML=`<input placeholder="Digite um endereço">`;
-
-document.getElementById("enderecos").appendChild(div);
+document.getElementById("inputs").appendChild(input);
 
 }
 
-addEndereco();
-addEndereco();
-
 async function geocode(endereco){
 
-let url=`https://api.openrouteservice.org/geocode/search?api_key=${API_KEY}&text=${encodeURIComponent(endereco)}`;
+let url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(endereco)}`;
 
-let res=await fetch(url);
-let data=await res.json();
+let res = await fetch(url);
 
-return data.features[0].geometry.coordinates;
+let data = await res.json();
+
+if(data.length==0) throw "Endereço não encontrado";
+
+return [
+parseFloat(data[0].lon),
+parseFloat(data[0].lat)
+];
 
 }
 
 async function calcularRota(){
 
-let inputs=document.querySelectorAll("#enderecos input");
+let inputs = document.querySelectorAll("#inputs input");
 
 let coords=[];
 
-for(let input of inputs){
+for(let i of inputs){
 
-if(input.value==="") continue;
+if(i.value.trim()!=""){
 
-let c=await geocode(input.value);
+let c = await geocode(i.value);
 
 coords.push(c);
 
 }
 
+}
+
 if(coords.length<2){
 
-alert("Digite pelo menos dois endereços");
+alert("Insira pelo menos dois endereços");
 
 return;
 
 }
 
-let body={coordinates:coords};
+let res = await fetch("https://api.openrouteservice.org/v2/directions/driving-car/geojson",{
 
-let response=await fetch(
-"https://api.openrouteservice.org/v2/directions/driving-car/geojson",
-{
 method:"POST",
+
 headers:{
 "Content-Type":"application/json",
 "Authorization":API_KEY
 },
-body:JSON.stringify(body)
+
+body:JSON.stringify({
+
+coordinates:coords
+
+})
+
 });
 
-let data=await response.json();
+let data = await res.json();
 
 if(rotaLayer) map.removeLayer(rotaLayer);
 
-rotaLayer=L.geoJSON(data).addTo(map);
+rotaLayer = L.geoJSON(data).addTo(map);
 
 map.fitBounds(rotaLayer.getBounds());
 
-mostrarResultados(data);
+let distancia = data.features[0].properties.summary.distance / 1000;
 
-}
+let custo = distancia * 0.85;
 
-function mostrarResultados(data){
+document.getElementById("resultado").innerHTML=
 
-let html="<h3>Resumo da rota</h3>";
-
-let totalKm=0;
-let totalCusto=0;
-
-data.features[0].properties.segments.forEach((seg,i)=>{
-
-let km=seg.distance/1000;
-
-let custo=km*CUSTO_KM;
-
-totalKm+=km;
-totalCusto+=custo;
-
-html+=`
-<p>
-Trecho ${i+1}<br>
-Distância: ${km.toFixed(2)} km<br>
-Custo gasolina: R$ ${custo.toFixed(2)}
-</p>
+`
+Distância total: <b>${distancia.toFixed(2)} km</b><br>
+Custo estimado: <b>R$ ${custo.toFixed(2)}</b>
 `;
-
-});
-
-html+=`<hr>
-<b>Total KM:</b> ${totalKm.toFixed(2)} km<br>
-<b>Total combustível:</b> R$ ${totalCusto.toFixed(2)}
-`;
-
-document.getElementById("resultado").innerHTML=html;
 
 }
 
@@ -219,5 +167,3 @@ document.getElementById("resultado").innerHTML=html;
 
 </body>
 </html>
-
-
