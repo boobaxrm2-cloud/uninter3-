@@ -30,7 +30,9 @@ z-index:1000;
 background:#1c1c1c;
 padding:20px;
 border-radius:10px;
-width:320px;
+width:360px;
+max-height:90vh;
+overflow:auto;
 
 }
 
@@ -46,46 +48,66 @@ border-radius:6px;
 
 button{
 
-margin-top:10px;
-padding:10px;
-width:100%;
+margin-top:8px;
+padding:8px;
 border:none;
-background:#2ecc71;
-color:white;
-font-weight:bold;
 border-radius:6px;
 cursor:pointer;
 
 }
 
-.sugestoes{
+.btnAdd{
+background:#2ecc71;
+color:white;
+width:100%;
+}
 
+.btnRota{
+background:#3498db;
+color:white;
+width:100%;
+}
+
+.btnExcluir{
+background:#e74c3c;
+color:white;
+margin-left:5px;
+}
+
+.sugestoes{
 background:white;
 color:black;
 max-height:150px;
 overflow:auto;
 border-radius:6px;
-
 }
 
 .itemSugestao{
-
 padding:8px;
 cursor:pointer;
-
 }
 
 .itemSugestao:hover{
-
 background:#eee;
-
 }
 
-.lista{
+.listaItem{
+margin-top:8px;
+padding:6px;
+background:#2a2a2a;
+border-radius:6px;
+font-size:13px;
+}
 
+.distancias{
 margin-top:10px;
 font-size:13px;
+}
 
+.total{
+margin-top:10px;
+font-weight:bold;
+color:#2ecc71;
 }
 
 </style>
@@ -96,15 +118,21 @@ font-size:13px;
 
 <div class="painel">
 
-<h3>Adicionar Visita</h3>
+<h3>Roteirizador de Visitas</h3>
 
 <input id="endereco" placeholder="Digite o endereço">
 
 <div id="sugestoes" class="sugestoes"></div>
 
-<button onclick="gerarRota()">Gerar rota</button>
+<button class="btnAdd" onclick="adicionarEndereco()">Adicionar endereço</button>
 
-<div class="lista" id="lista"></div>
+<button class="btnRota" onclick="gerarRota()">Gerar rota</button>
+
+<div id="lista"></div>
+
+<div class="distancias" id="distancias"></div>
+
+<div class="total" id="total"></div>
 
 </div>
 
@@ -114,34 +142,34 @@ font-size:13px;
 
 <script>
 
-const API_KEY = "eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6IjBkNDRmZDJkNmQzMTRkZWQ4YWYyZGIzODY1NzViNjA5IiwiaCI6Im11cm11cjY0In0="
+const API_KEY="eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6IjBkNDRmZDJkNmQzMTRkZWQ4YWYyZGIzODY1NzViNjA5IiwiaCI6Im11cm11cjY0In0="
 
-var map = L.map('map').setView([-22.90,-43.20],12)
+var map=L.map('map').setView([-22.90,-43.20],12)
 
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
-maxZoom:19
-}).addTo(map)
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19}).addTo(map)
 
-let pontos = []
-let marcadores = []
-let rota
+let pontos=[]
+let enderecos=[]
+let marcadores=[]
+let rota=null
 
-const input = document.getElementById("endereco")
-const sugestoes = document.getElementById("sugestoes")
-const lista = document.getElementById("lista")
+let enderecoSelecionado=null
 
-input.addEventListener("input", function(){
+const input=document.getElementById("endereco")
+const sugestoes=document.getElementById("sugestoes")
 
-let valor = this.value
+input.addEventListener("input",function(){
 
-if(valor.length < 3){
+let valor=this.value
+
+if(valor.length<3){
 sugestoes.innerHTML=""
 return
 }
 
 fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${valor}`)
 
-.then(res=>res.json())
+.then(r=>r.json())
 
 .then(data=>{
 
@@ -149,13 +177,19 @@ sugestoes.innerHTML=""
 
 data.slice(0,5).forEach(local=>{
 
-let div = document.createElement("div")
+let div=document.createElement("div")
+
 div.className="itemSugestao"
+
 div.innerText=local.display_name
 
-div.onclick = function(){
+div.onclick=function(){
 
-selecionarEndereco(local)
+enderecoSelecionado=local
+
+input.value=local.display_name
+
+sugestoes.innerHTML=""
 
 }
 
@@ -167,37 +201,72 @@ sugestoes.appendChild(div)
 
 })
 
-function selecionarEndereco(local){
+function adicionarEndereco(){
 
-sugestoes.innerHTML=""
+if(!enderecoSelecionado){
+alert("Selecione um endereço da lista")
+return
+}
 
-input.value = local.display_name
+let lat=parseFloat(enderecoSelecionado.lat)
+let lon=parseFloat(enderecoSelecionado.lon)
 
-let lat = parseFloat(local.lat)
-let lon = parseFloat(local.lon)
+let marker=L.marker([lat,lon]).addTo(map)
 
-let marker = L.marker([lat,lon]).addTo(map)
-
-marker.bindPopup(local.display_name).openPopup()
+marker.bindPopup(enderecoSelecionado.display_name)
 
 marcadores.push(marker)
 
 pontos.push([lon,lat])
+enderecos.push(enderecoSelecionado.display_name)
+
+atualizarLista()
 
 map.setView([lat,lon],14)
 
-lista.innerHTML += "• "+local.display_name+"<br>"
+input.value=""
+enderecoSelecionado=null
+
+}
+
+function atualizarLista(){
+
+let lista=document.getElementById("lista")
+
+lista.innerHTML=""
+
+enderecos.forEach((end,i)=>{
+
+let div=document.createElement("div")
+
+div.className="listaItem"
+
+div.innerHTML=end+
+` <button class="btnExcluir" onclick="remover(${i})">Excluir</button>`
+
+lista.appendChild(div)
+
+})
+
+}
+
+function remover(index){
+
+map.removeLayer(marcadores[index])
+
+marcadores.splice(index,1)
+pontos.splice(index,1)
+enderecos.splice(index,1)
+
+atualizarLista()
 
 }
 
 function gerarRota(){
 
-if(pontos.length < 2){
-
-alert("Adicione pelo menos 2 pontos")
-
+if(pontos.length<2){
+alert("Adicione pelo menos 2 endereços")
 return
-
 }
 
 if(rota){
@@ -219,29 +288,67 @@ coordinates:pontos
 
 })
 
-.then(res=>res.json())
+.then(r=>r.json())
 
 .then(data=>{
 
-let coords = data.features[0].geometry.coordinates
+let coords=data.features[0].geometry.coordinates
 
-let latlngs = coords.map(c=>[c[1],c[0]])
+let latlngs=coords.map(c=>[c[1],c[0]])
 
-rota = L.polyline(latlngs,{
+rota=L.polyline(latlngs,{
 color:"cyan",
 weight:5
 }).addTo(map)
 
 map.fitBounds(rota.getBounds())
 
+calcularDistancias(data)
+
 })
+
+}
+
+function calcularDistancias(data){
+
+let segmentos=data.features[0].properties.segments
+
+let div=document.getElementById("distancias")
+
+let totalKm=0
+
+div.innerHTML="<b>Distância entre pontos:</b><br>"
+
+segmentos[0].steps.forEach((step,i)=>{
+
+let km=step.distance/1000
+
+if(km>0.05){
+
+let custo=km*0.85
+
+totalKm+=km
+
+div.innerHTML+=`Trecho: ${km.toFixed(2)} km → R$ ${custo.toFixed(2)}<br>`
+
+}
+
+})
+
+let totalValor=totalKm*0.85
+
+document.getElementById("total").innerHTML=
+`Distância total: ${totalKm.toFixed(2)} km<br>
+Custo total: R$ ${totalValor.toFixed(2)}`
 
 }
 
 </script>
 
 </body>
+
 </html>
+
 
 
 
