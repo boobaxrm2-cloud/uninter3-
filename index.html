@@ -2,10 +2,14 @@
 <html lang="pt-br">
 
 <head>
+
 <meta charset="UTF-8">
-<title>Roteirizador de Visitas</title>
+<title>Roteirizador Inteligente</title>
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
 
 <style>
 
@@ -18,28 +22,24 @@ color:white;
 
 #map{
 height:100vh;
-width:100%;
 }
 
-.container{
-display:flex;
-}
-
-.painelEsquerdo{
+.painel{
 
 position:absolute;
 top:20px;
 left:20px;
+width:360px;
 
 background:#1c1c1c;
 padding:20px;
 border-radius:10px;
-width:340px;
+
 z-index:1000;
 
 }
 
-.painelDireito{
+.resultado{
 
 position:absolute;
 top:20px;
@@ -52,18 +52,14 @@ width:300px;
 max-height:85vh;
 overflow:auto;
 
-z-index:1000;
-
 }
 
 input{
-
 width:100%;
 padding:10px;
 border:none;
 border-radius:6px;
 margin-top:5px;
-
 }
 
 button{
@@ -79,22 +75,41 @@ width:100%;
 
 .add{background:#2ecc71;color:white}
 .rota{background:#3498db;color:white}
+.popup{background:#9b59b6;color:white}
+.excel{background:#f39c12;color:white}
 
-.btnExcluir{
+.listaItem{
+
+background:#2a2a2a;
+padding:6px;
+margin-top:6px;
+border-radius:6px;
+font-size:13px;
+display:flex;
+justify-content:space-between;
+align-items:center;
+
+}
+
+.lixeira{
 
 background:#e74c3c;
 color:white;
-margin-left:5px;
+border:none;
+border-radius:4px;
 padding:3px 6px;
+cursor:pointer;
 
 }
 
 .sugestoes{
+
 background:white;
 color:black;
 max-height:150px;
 overflow:auto;
 border-radius:6px;
+
 }
 
 .itemSugestao{
@@ -104,14 +119,6 @@ cursor:pointer;
 
 .itemSugestao:hover{
 background:#eee;
-}
-
-.listaItem{
-background:#2a2a2a;
-padding:6px;
-margin-top:6px;
-border-radius:6px;
-font-size:13px;
 }
 
 .loading{
@@ -135,10 +142,8 @@ margin:auto;
 }
 
 @keyframes girar{
-
-0%{transform:rotate(0deg)}
+0%{transform:rotate(0)}
 100%{transform:rotate(360deg)}
-
 }
 
 .segmento{
@@ -158,9 +163,9 @@ color:#2ecc71;
 
 <body>
 
-<div class="painelEsquerdo">
+<div class="painel">
 
-<h3>Adicionar Endereço</h3>
+<h3>Adicionar endereço</h3>
 
 <input id="endereco" placeholder="Digite o endereço">
 
@@ -168,7 +173,11 @@ color:#2ecc71;
 
 <button class="add" onclick="adicionarEndereco()">Adicionar endereço</button>
 
-<button class="rota" onclick="gerarRota()">Gerar rota</button>
+<button class="rota" onclick="gerarRota()">Gerar rota otimizada</button>
+
+<button class="popup" onclick="mostrarPopup()">Visualizar rota</button>
+
+<button class="excel" onclick="baixarExcel()">Baixar Excel</button>
 
 <div class="loading" id="loading">
 
@@ -181,9 +190,9 @@ Calculando rota...
 
 </div>
 
-<div class="painelDireito">
+<div class="resultado">
 
-<h3>Detalhes da Rota</h3>
+<h3>Resumo da rota</h3>
 
 <div id="detalhes"></div>
 
@@ -193,13 +202,11 @@ Calculando rota...
 
 <div id="map"></div>
 
-<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-
 <script>
 
 const API_KEY="eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6IjBkNDRmZDJkNmQzMTRkZWQ4YWYyZGIzODY1NzViNjA5IiwiaCI6Im11cm11cjY0In0="
 
-var map=L.map('map').setView([-22.90,-43.20],12)
+var map=L.map('map').setView([-22.9,-43.2],12)
 
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19}).addTo(map)
 
@@ -208,6 +215,7 @@ let marcadores=[]
 let enderecos=[]
 let rota=null
 let enderecoSelecionado=null
+let dadosRota=[]
 
 const input=document.getElementById("endereco")
 const sugestoes=document.getElementById("sugestoes")
@@ -263,9 +271,16 @@ return
 let lat=parseFloat(enderecoSelecionado.lat)
 let lon=parseFloat(enderecoSelecionado.lon)
 
-let marker=L.marker([lat,lon]).addTo(map)
+let marker=L.marker([lat,lon],{draggable:true}).addTo(map)
 
 marker.bindPopup(enderecoSelecionado.display_name)
+
+marker.on("dragend",function(){
+
+let pos=marker.getLatLng()
+pontos[marcadores.indexOf(marker)]=[pos.lng,pos.lat]
+
+})
 
 marcadores.push(marker)
 pontos.push([lon,lat])
@@ -293,7 +308,7 @@ let div=document.createElement("div")
 div.className="listaItem"
 
 div.innerHTML=end+
-` <button class="btnExcluir" onclick="remover(${i})">Excluir</button>`
+` <button class="lixeira" onclick="remover(${i})">🗑</button>`
 
 lista.appendChild(div)
 
@@ -336,7 +351,8 @@ headers:{
 },
 
 body:JSON.stringify({
-coordinates:pontos
+coordinates:pontos,
+optimize_waypoints:true
 })
 
 })
@@ -358,50 +374,47 @@ weight:5
 
 map.fitBounds(rota.getBounds())
 
-mostrarSegmentos(data)
+calcularDistancias(data)
 
 })
 
 }
 
-function mostrarSegmentos(data){
+function calcularDistancias(data){
 
-let segmentos=data.features[0].properties.segments[0].steps
+dadosRota=[]
+
+let segmentos=data.features[0].properties.segments
+
+let totalKm=0
 
 let detalhes=document.getElementById("detalhes")
 
 detalhes.innerHTML=""
 
-let totalKm=0
+segmentos.forEach((seg,i)=>{
 
-segmentos.forEach(step=>{
-
-let km=step.distance/1000
-
-if(km>0.2){
-
-let custo=km*0.85
+let km=seg.distance/1000
+let valor=km*0.85
 
 totalKm+=km
+
+dadosRota.push({
+
+ordem:i+1,
+endereco:enderecos[i],
+km:km,
+valor:valor
+
+})
 
 let div=document.createElement("div")
 
 div.className="segmento"
 
-div.innerHTML=`${km.toFixed(2)} km → R$ ${custo.toFixed(2)}`
+div.innerHTML=`Visita ${i+1} → ${km.toFixed(2)} km | R$ ${valor.toFixed(2)}`
 
 detalhes.appendChild(div)
-
-let pos=map.getCenter()
-
-L.marker(pos,{
-icon:L.divIcon({
-className:"labelKm",
-html:`<div style="background:black;padding:3px;border-radius:4px;font-size:11px">${km.toFixed(1)} km</div>`
-})
-}).addTo(map)
-
-}
 
 })
 
@@ -414,10 +427,80 @@ Custo total: R$ ${totalValor.toFixed(2)}`
 
 }
 
+function mostrarPopup(){
+
+if(dadosRota.length==0){
+alert("Calcule a rota primeiro")
+return
+}
+
+let texto="ROTA OTIMIZADA\n\n"
+
+dadosRota.forEach(d=>{
+
+texto+=`Visita ${d.ordem}
+${d.endereco}
+Distância: ${d.km.toFixed(2)} km
+Valor: R$ ${d.valor.toFixed(2)}
+
+`
+
+})
+
+let popup=window.open("","rota","width=400,height=500")
+
+popup.document.write(`<pre>${texto}</pre>`)
+
+}
+
+function baixarExcel(){
+
+if(dadosRota.length==0){
+alert("Calcule a rota primeiro")
+return
+}
+
+let total=0
+
+let planilha=dadosRota.map(d=>{
+
+total+=d.valor
+
+return{
+
+"Ordem da visita":d.ordem,
+"Endereço da visita":d.endereco,
+"Distância do último ponto (km)":d.km.toFixed(2),
+"Valor do trecho (R$)":d.valor.toFixed(2)
+
+}
+
+})
+
+planilha.push({
+
+"Ordem da visita":"",
+"Endereço da visita":"TOTAL",
+"Distância do último ponto (km)":"",
+"Valor do trecho (R$)":total.toFixed(2)
+
+})
+
+let ws=XLSX.utils.json_to_sheet(planilha)
+
+let wb=XLSX.utils.book_new()
+
+XLSX.utils.book_append_sheet(wb,ws,"Rota")
+
+XLSX.writeFile(wb,"rota_visitas.xlsx")
+
+}
+
 </script>
 
 </body>
 </html>
+
 
 
 
