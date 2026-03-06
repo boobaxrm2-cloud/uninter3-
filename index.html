@@ -1,62 +1,97 @@
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<title>Roteirizador Logístico</title>
+<title>Roteirizador Inteligente</title>
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
 
 <style>
 
 body{
-background:#000;
+margin:0;
+background:#05070d;
 font-family:Arial;
 color:white;
-margin:0;
-}
-
-.container{
-width:420px;
-position:absolute;
-top:20px;
-left:20px;
-background:#111;
-padding:20px;
-border-radius:10px;
-z-index:1000;
-}
-
-input,button{
-width:100%;
-padding:10px;
-margin-top:8px;
-border:none;
-border-radius:5px;
-}
-
-button{
-background:#2ecc71;
-color:white;
-font-weight:bold;
-cursor:pointer;
+overflow:hidden;
 }
 
 #map{
+position:absolute;
+top:0;
+right:0;
+width:70%;
 height:100vh;
 }
 
-.autocomplete{
-background:#222;
+.panel{
+position:absolute;
+left:0;
+top:0;
+width:30%;
+height:100vh;
+background:#0b0f1a;
+padding:25px;
+overflow:auto;
+box-shadow:0 0 40px #0af3;
+}
+
+h1{
+color:#0af;
+font-size:22px;
+margin-bottom:20px;
+}
+
+input{
+width:100%;
+padding:12px;
+margin-top:10px;
+border-radius:6px;
+border:none;
+background:#101726;
+color:white;
+}
+
+button{
+margin-top:12px;
+padding:12px;
+border:none;
+border-radius:6px;
+cursor:pointer;
+background:#0af;
+color:white;
+font-weight:bold;
+transition:.2s;
+}
+
+button:hover{
+background:#08c;
+transform:scale(1.03);
+}
+
+.stop{
 position:relative;
 }
 
-.suggestions{
+.remove{
 position:absolute;
-background:#333;
-width:100%;
+right:5px;
+top:15px;
+cursor:pointer;
+color:red;
+}
+
+.suggestions{
+background:#111;
+position:absolute;
+z-index:999;
+width:90%;
 max-height:150px;
-overflow-y:auto;
-z-index:2000;
+overflow:auto;
+border-radius:6px;
 }
 
 .suggestions div{
@@ -65,7 +100,25 @@ cursor:pointer;
 }
 
 .suggestions div:hover{
-background:#555;
+background:#0af;
+}
+
+#loading{
+display:none;
+margin-top:10px;
+color:#0af;
+}
+
+.popup{
+position:fixed;
+top:50%;
+left:50%;
+transform:translate(-50%,-50%);
+background:#0b0f1a;
+padding:30px;
+border-radius:10px;
+box-shadow:0 0 30px #0af;
+display:none;
 }
 
 </style>
@@ -73,186 +126,265 @@ background:#555;
 
 <body>
 
-<div class="container">
+<div class="panel">
 
-<h3>Roteirizador</h3>
+<h1>Roteirizador Futurista</h1>
 
-<div class="autocomplete">
-<input id="endereco" placeholder="Digite o endereço">
-<div id="lista" class="suggestions"></div>
-</div>
+<div id="stops"></div>
 
-<button onclick="adicionarEndereco()">Adicionar endereço</button>
+<button onclick="addStop()">Adicionar endereço</button>
 
-<div id="enderecos"></div>
+<button onclick="calculateRoute()">Roteirizar Rotas</button>
 
-<input id="valorKM" placeholder="Valor por KM (R$)" type="number">
+<button onclick="clearRoute()">Limpar rota</button>
 
-<button onclick="calcularRota()">Calcular Rota</button>
-
-<button onclick="abrirDespesas()">Despesas Diárias</button>
-
-<button onclick="gerarPDF()">Baixar PDF</button>
-
-<h3 id="resultado"></h3>
+<div id="loading">Calculando rota...</div>
 
 </div>
 
 <div id="map"></div>
 
-<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/leaflet-routing-machine@latest/dist/leaflet-routing-machine.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<div id="popup" class="popup">
+<h2>Resumo da Rota</h2>
+<div id="summary"></div>
+<button onclick="downloadExcel()">Baixar Excel</button>
+<button onclick="closePopup()">Fechar</button>
+</div>
 
 <script>
 
-let map = L.map('map').setView([-22.9,-43.2],12)
+const apiKey="eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6IjBkNDRmZDJkNmQzMTRkZWQ4YWYyZGIzODY1NzViNjA5IiwiaCI6Im11cm11cjY0In0="
+
+let map=L.map('map').setView([-22.9,-43.2],12)
 
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
-maxZoom:19
 }).addTo(map)
 
-let enderecos=[]
-let coordenadas=[]
-let despesas=[]
-let routingControl=null
+let stops=[]
+let markers=[]
+let routeLine=null
+let routeData=[]
 
-const input=document.getElementById("endereco")
-const lista=document.getElementById("lista")
+function addStop(){
 
-input.addEventListener("input",async function(){
+let div=document.createElement("div")
+div.className="stop"
+
+let input=document.createElement("input")
+input.placeholder="Digite um endereço"
+
+let sug=document.createElement("div")
+sug.className="suggestions"
+
+let remove=document.createElement("span")
+remove.innerHTML="✖"
+remove.className="remove"
+remove.onclick=()=>div.remove()
+
+input.oninput=async()=>{
 
 let q=input.value
 
-if(q.length<3){
-lista.innerHTML=""
-return
-}
+if(q.length<3)return
 
-let url=`https://nominatim.openstreetmap.org/search?format=json&q=${q}`
-
-let res=await fetch(url)
+let res=await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${q}`)
 
 let data=await res.json()
 
-lista.innerHTML=""
+sug.innerHTML=""
 
-data.forEach(l=>{
+data.forEach(place=>{
 
-let div=document.createElement("div")
+let item=document.createElement("div")
 
-div.innerText=l.display_name
+item.innerText=place.display_name
 
-div.onclick=()=>{
+item.onclick=()=>{
 
-input.value=l.display_name
-input.dataset.lat=l.lat
-input.dataset.lon=l.lon
+input.value=place.display_name
 
-lista.innerHTML=""
+input.dataset.lat=place.lat
+input.dataset.lon=place.lon
 
-}
-
-lista.appendChild(div)
-
-})
-
-})
-
-function adicionarEndereco(){
-
-let nome=input.value
-let lat=input.dataset.lat
-let lon=input.dataset.lon
-
-if(!lat){
-alert("Escolha um endereço da lista")
-return
-}
-
-enderecos.push(nome)
-
-coordenadas.push([lat,lon])
-
-document.getElementById("enderecos").innerHTML+=`<p>${nome}</p>`
-
-input.value=""
+sug.innerHTML=""
 
 }
 
-function calcularRota(){
-
-if(routingControl){
-map.removeControl(routingControl)
-}
-
-let waypoints=coordenadas.map(c=>L.latLng(c[0],c[1]))
-
-routingControl=L.Routing.control({
-waypoints:waypoints,
-routeWhileDragging:false
-}).addTo(map)
-
-routingControl.on('routesfound',function(e){
-
-let distancia=e.routes[0].summary.totalDistance/1000
-
-let valorKM=document.getElementById("valorKM").value
-
-let custo=distancia*valorKM
-
-let totalDespesas=despesas.reduce((a,b)=>a+b,0)
-
-let total=custo+totalDespesas
-
-document.getElementById("resultado").innerHTML=
-
-`
-Distância: ${distancia.toFixed(2)} km <br>
-Custo KM: R$ ${custo.toFixed(2)} <br>
-Despesas: R$ ${totalDespesas.toFixed(2)} <br>
-Total: R$ ${total.toFixed(2)}
-`
+sug.appendChild(item)
 
 })
 
 }
 
-function abrirDespesas(){
+div.appendChild(input)
+div.appendChild(remove)
+div.appendChild(sug)
 
-let valor=prompt("Digite valor da despesa")
-
-if(valor){
-despesas.push(Number(valor))
-}
+document.getElementById("stops").appendChild(div)
 
 }
 
-async function gerarPDF(){
+addStop()
+addStop()
 
-const {jsPDF}=window.jspdf
+async function calculateRoute(){
 
-let canvas=await html2canvas(document.getElementById("map"))
+document.getElementById("loading").style.display="block"
 
-let img=canvas.toDataURL("image/png")
+let coords=[]
+let addresses=[]
 
-let pdf=new jsPDF()
+document.querySelectorAll("#stops input").forEach(i=>{
 
-pdf.text("Relatório de Rota",20,20)
+if(i.dataset.lat){
 
-let y=40
+coords.push([parseFloat(i.dataset.lon),parseFloat(i.dataset.lat)])
+addresses.push(i.value)
 
-enderecos.forEach(e=>{
-
-pdf.text(e,20,y)
-y+=10
+}
 
 })
 
-pdf.addImage(img,'PNG',15,80,180,100)
+let res=await fetch("https://api.openrouteservice.org/v2/directions/driving-car",{
 
-pdf.save("rota.pdf")
+method:"POST",
+
+headers:{
+"Authorization":apiKey,
+"Content-Type":"application/json"
+},
+
+body:JSON.stringify({
+coordinates:coords
+})
+
+})
+
+let data=await res.json()
+
+let route=data.routes[0]
+
+let geometry=route.geometry
+
+let decoded=decodePolyline(geometry)
+
+if(routeLine)map.removeLayer(routeLine)
+
+routeLine=L.polyline(decoded,{color:"#00aaff"}).addTo(map)
+
+map.fitBounds(routeLine.getBounds())
+
+routeData=[]
+
+let summaryHTML=""
+
+let total=0
+
+route.segments.forEach((seg,i)=>{
+
+let km=(seg.distance/1000).toFixed(2)
+
+let cost=(km*0.85).toFixed(2)
+
+total+=parseFloat(cost)
+
+routeData.push({
+ordem:i+1,
+endereco:addresses[i],
+km:km,
+valor:cost
+})
+
+summaryHTML+=`<p>${addresses[i]} → ${km} km | R$ ${cost}</p>`
+
+})
+
+summaryHTML+=`<h3>Total: R$ ${total.toFixed(2)}</h3>`
+
+document.getElementById("summary").innerHTML=summaryHTML
+
+document.getElementById("popup").style.display="block"
+
+document.getElementById("loading").style.display="none"
+
+}
+
+function decodePolyline(str,precision=5){
+
+let index=0,lng=0,lat=0,coords=[]
+const factor=Math.pow(10,precision)
+
+while(index<str.length){
+
+let b,shift=0,result=0
+
+do{
+b=str.charCodeAt(index++)-63
+result|=(b&0x1f)<<shift
+shift+=5
+}while(b>=0x20)
+
+let dlat=((result&1)?~(result>>1):(result>>1))
+lat+=dlat
+
+shift=0
+result=0
+
+do{
+b=str.charCodeAt(index++)-63
+result|=(b&0x1f)<<shift
+shift+=5
+}while(b>=0x20)
+
+let dlng=((result&1)?~(result>>1):(result>>1))
+lng+=dlng
+
+coords.push([lat/factor,lng/factor])
+
+}
+
+return coords
+
+}
+
+function clearRoute(){
+
+if(routeLine)map.removeLayer(routeLine)
+
+document.getElementById("stops").innerHTML=""
+
+addStop()
+addStop()
+
+}
+
+function closePopup(){
+
+document.getElementById("popup").style.display="none"
+
+}
+
+function downloadExcel(){
+
+let data=[["Ordem","Endereço","Km desde última visita","Valor desde último ponto","Valor total rota"]]
+
+let total=0
+
+routeData.forEach(r=>{
+
+total+=parseFloat(r.valor)
+
+data.push([r.ordem,r.endereco,r.km,r.valor,total.toFixed(2)])
+
+})
+
+let ws=XLSX.utils.aoa_to_sheet(data)
+
+let wb=XLSX.utils.book_new()
+
+XLSX.utils.book_append_sheet(wb,ws,"Rota")
+
+XLSX.writeFile(wb,"rota.xlsx")
 
 }
 
@@ -260,6 +392,7 @@ pdf.save("rota.pdf")
 
 </body>
 </html>
+
 
 
 
