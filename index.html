@@ -2,9 +2,10 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<title>Roteirizador Inteligente</title>
+<title>Roteirizador Futurista</title>
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
 
@@ -20,7 +21,6 @@ overflow:hidden;
 
 #map{
 position:absolute;
-top:0;
 right:0;
 width:70%;
 height:100vh;
@@ -29,7 +29,6 @@ height:100vh;
 .panel{
 position:absolute;
 left:0;
-top:0;
 width:30%;
 height:100vh;
 background:#0b0f1a;
@@ -40,7 +39,6 @@ box-shadow:0 0 40px #0af3;
 
 h1{
 color:#0af;
-font-size:22px;
 }
 
 input{
@@ -54,7 +52,7 @@ color:white;
 }
 
 button{
-margin-top:12px;
+margin-top:10px;
 padding:12px;
 border:none;
 border-radius:6px;
@@ -62,12 +60,7 @@ cursor:pointer;
 background:#0af;
 color:white;
 font-weight:bold;
-transition:.2s;
 width:100%;
-}
-
-button:hover{
-background:#08c;
 }
 
 .stop{
@@ -105,12 +98,6 @@ cursor:pointer;
 background:#0af;
 }
 
-#loading{
-display:none;
-margin-top:10px;
-color:#0af;
-}
-
 .popup{
 position:fixed;
 top:50%;
@@ -121,7 +108,6 @@ padding:30px;
 border-radius:10px;
 box-shadow:0 0 30px #0af;
 display:none;
-max-width:400px;
 }
 
 </style>
@@ -140,8 +126,6 @@ max-width:400px;
 <button onclick="calculateRoute()">Roteirizar Rotas</button>
 
 <button onclick="clearRoute()">Limpar rota</button>
-
-<div id="loading">Calculando rota...</div>
 
 </div>
 
@@ -162,6 +146,7 @@ let map=L.map('map').setView([-22.9,-43.2],12)
 
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map)
 
+let markers=[]
 let routeLine=null
 let routeData=[]
 
@@ -210,9 +195,7 @@ suggestions.style.display="none"
 return
 }
 
-let url=`https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&q=${encodeURIComponent(query)}`
-
-let res=await fetch(url)
+let res=await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}`)
 
 let data=await res.json()
 
@@ -232,6 +215,8 @@ input.dataset.lon=place.lon
 
 suggestions.style.display="none"
 
+updateMap()
+
 }
 
 suggestions.appendChild(item)
@@ -245,9 +230,80 @@ suggestions.style.display="block"
 addStop()
 addStop()
 
-async function calculateRoute(){
+async function updateMap(){
 
-document.getElementById("loading").style.display="block"
+let coords=[]
+
+markers.forEach(m=>map.removeLayer(m))
+markers=[]
+
+document.querySelectorAll("#stops input").forEach(i=>{
+
+if(i.dataset.lat){
+
+let lat=parseFloat(i.dataset.lat)
+let lon=parseFloat(i.dataset.lon)
+
+coords.push([lon,lat])
+
+let marker=L.marker([lat,lon]).addTo(map)
+
+markers.push(marker)
+
+}
+
+})
+
+if(coords.length<2) return
+
+let res=await fetch("https://api.openrouteservice.org/v2/directions/driving-car",{
+
+method:"POST",
+
+headers:{
+"Authorization":apiKey,
+"Content-Type":"application/json"
+},
+
+body:JSON.stringify({coordinates:coords})
+
+})
+
+let data=await res.json()
+
+let route=data.routes[0]
+
+let decoded=decodePolyline(route.geometry)
+
+animateRoute(decoded)
+
+map.fitBounds(L.polyline(decoded).getBounds())
+
+}
+
+function animateRoute(coords){
+
+if(routeLine) map.removeLayer(routeLine)
+
+routeLine=L.polyline([],{color:"#00aaff",weight:6}).addTo(map)
+
+let i=0
+
+let interval=setInterval(()=>{
+
+routeLine.addLatLng(coords[i])
+
+i++
+
+if(i>=coords.length){
+clearInterval(interval)
+}
+
+},20)
+
+}
+
+async function calculateRoute(){
 
 let coords=[]
 let addresses=[]
@@ -272,9 +328,7 @@ headers:{
 "Content-Type":"application/json"
 },
 
-body:JSON.stringify({
-coordinates:coords
-})
+body:JSON.stringify({coordinates:coords})
 
 })
 
@@ -282,17 +336,9 @@ let data=await res.json()
 
 let route=data.routes[0]
 
-let decoded=decodePolyline(route.geometry)
-
-if(routeLine)map.removeLayer(routeLine)
-
-routeLine=L.polyline(decoded,{color:"#00aaff",weight:5}).addTo(map)
-
-map.fitBounds(routeLine.getBounds())
-
 routeData=[]
 
-let summaryHTML=""
+let html=""
 let total=0
 
 route.segments.forEach((seg,i)=>{
@@ -310,17 +356,14 @@ km:km,
 valor:cost
 })
 
-summaryHTML+=`<p>${addresses[i]} → ${km} km | R$ ${cost}</p>`
+html+=`<p>${addresses[i]} → ${km} km | R$ ${cost}</p>`
 
 })
 
-summaryHTML+=`<h3>Total: R$ ${total.toFixed(2)}</h3>`
+html+=`<h3>Total: R$ ${total.toFixed(2)}</h3>`
 
-document.getElementById("summary").innerHTML=summaryHTML
-
+document.getElementById("summary").innerHTML=html
 document.getElementById("popup").style.display="block"
-
-document.getElementById("loading").style.display="none"
 
 }
 
@@ -364,7 +407,9 @@ return coords
 
 function clearRoute(){
 
-if(routeLine)map.removeLayer(routeLine)
+if(routeLine) map.removeLayer(routeLine)
+
+markers.forEach(m=>map.removeLayer(m))
 
 document.getElementById("stops").innerHTML=""
 
@@ -407,6 +452,7 @@ XLSX.writeFile(wb,"rota.xlsx")
 
 </body>
 </html>
+
 
 
 
