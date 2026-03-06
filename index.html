@@ -2,10 +2,9 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<title>Roteirizador de Visitas Fluxomed</title>
+<title>Roteirizador Inteligente</title>
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
-
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
 
@@ -42,7 +41,6 @@ box-shadow:0 0 40px #0af3;
 h1{
 color:#0af;
 font-size:22px;
-margin-bottom:20px;
 }
 
 input{
@@ -65,21 +63,22 @@ background:#0af;
 color:white;
 font-weight:bold;
 transition:.2s;
+width:100%;
 }
 
 button:hover{
 background:#08c;
-transform:scale(1.03);
 }
 
 .stop{
 position:relative;
+margin-bottom:15px;
 }
 
 .remove{
 position:absolute;
-right:5px;
-top:15px;
+right:8px;
+top:14px;
 cursor:pointer;
 color:red;
 }
@@ -87,11 +86,14 @@ color:red;
 .suggestions{
 background:#111;
 position:absolute;
-z-index:999;
-width:90%;
+top:42px;
+left:0;
+width:100%;
 max-height:150px;
-overflow:auto;
+overflow-y:auto;
 border-radius:6px;
+border:1px solid #0af;
+z-index:9999;
 }
 
 .suggestions div{
@@ -119,6 +121,7 @@ padding:30px;
 border-radius:10px;
 box-shadow:0 0 30px #0af;
 display:none;
+max-width:400px;
 }
 
 </style>
@@ -157,11 +160,8 @@ const apiKey="eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6IjBkNDRmZDJkNm
 
 let map=L.map('map').setView([-22.9,-43.2],12)
 
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
-}).addTo(map)
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map)
 
-let stops=[]
-let markers=[]
 let routeLine=null
 let routeData=[]
 
@@ -173,25 +173,50 @@ div.className="stop"
 let input=document.createElement("input")
 input.placeholder="Digite um endereço"
 
-let sug=document.createElement("div")
-sug.className="suggestions"
+let suggestions=document.createElement("div")
+suggestions.className="suggestions"
+suggestions.style.display="none"
 
 let remove=document.createElement("span")
 remove.innerHTML="✖"
 remove.className="remove"
+
 remove.onclick=()=>div.remove()
 
-input.oninput=async()=>{
+let timeout=null
 
-let q=input.value
+input.addEventListener("input",()=>{
 
-if(q.length<3)return
+clearTimeout(timeout)
 
-let res=await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${q}`)
+timeout=setTimeout(()=>searchAddress(input,suggestions),400)
+
+})
+
+div.appendChild(input)
+div.appendChild(remove)
+div.appendChild(suggestions)
+
+document.getElementById("stops").appendChild(div)
+
+}
+
+async function searchAddress(input,suggestions){
+
+let query=input.value
+
+if(query.length<3){
+suggestions.style.display="none"
+return
+}
+
+let url=`https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&q=${encodeURIComponent(query)}`
+
+let res=await fetch(url)
 
 let data=await res.json()
 
-sug.innerHTML=""
+suggestions.innerHTML=""
 
 data.forEach(place=>{
 
@@ -202,25 +227,18 @@ item.innerText=place.display_name
 item.onclick=()=>{
 
 input.value=place.display_name
-
 input.dataset.lat=place.lat
 input.dataset.lon=place.lon
 
-sug.innerHTML=""
+suggestions.style.display="none"
 
 }
 
-sug.appendChild(item)
+suggestions.appendChild(item)
 
 })
 
-}
-
-div.appendChild(input)
-div.appendChild(remove)
-div.appendChild(sug)
-
-document.getElementById("stops").appendChild(div)
+suggestions.style.display="block"
 
 }
 
@@ -264,20 +282,17 @@ let data=await res.json()
 
 let route=data.routes[0]
 
-let geometry=route.geometry
-
-let decoded=decodePolyline(geometry)
+let decoded=decodePolyline(route.geometry)
 
 if(routeLine)map.removeLayer(routeLine)
 
-routeLine=L.polyline(decoded,{color:"#00aaff"}).addTo(map)
+routeLine=L.polyline(decoded,{color:"#00aaff",weight:5}).addTo(map)
 
 map.fitBounds(routeLine.getBounds())
 
 routeData=[]
 
 let summaryHTML=""
-
 let total=0
 
 route.segments.forEach((seg,i)=>{
