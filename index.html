@@ -35,6 +35,17 @@ background:#0b0f1a;
 padding:25px;
 overflow:auto;
 box-shadow:0 0 40px #0af3;
+
+/* divisão suave com o mapa */
+border-right:1px solid rgba(0,170,255,0.25);
+
+background:linear-gradient(
+to right,
+#0b0f1a 85%,
+rgba(11,15,26,0.95) 92%,
+rgba(11,15,26,0.8) 96%,
+transparent
+);
 }
 
 h1{
@@ -97,8 +108,6 @@ cursor:pointer;
 .suggestions div:hover{
 background:#0af;
 }
-
-/* POPUP CORRIGIDO */
 
 .popup{
 position:fixed;
@@ -188,7 +197,6 @@ let timeout=null
 input.addEventListener("input",()=>{
 
 clearTimeout(timeout)
-
 timeout=setTimeout(()=>searchAddress(input,suggestions),400)
 
 })
@@ -274,7 +282,6 @@ if(coords.length<2) return
 let res=await fetch("https://api.openrouteservice.org/v2/directions/driving-car",{
 
 method:"POST",
-
 headers:{
 "Authorization":apiKey,
 "Content-Type":"application/json"
@@ -327,14 +334,29 @@ document.querySelectorAll("#stops input").forEach(i=>{
 
 if(i.dataset.lat){
 
-coords.push([parseFloat(i.dataset.lon),parseFloat(i.dataset.lat)])
+coords.push({
+location:[parseFloat(i.dataset.lon),parseFloat(i.dataset.lat)]
+})
+
 addresses.push(i.value)
 
 }
 
 })
 
-let res=await fetch("https://api.openrouteservice.org/v2/directions/driving-car",{
+if(coords.length < 2){
+alert("Adicione pelo menos dois endereços.")
+return
+}
+
+let body={
+jobs:coords.map((c,i)=>({
+id:i,
+location:c.location
+}))
+}
+
+let res=await fetch("https://api.openrouteservice.org/optimization",{
 
 method:"POST",
 
@@ -343,13 +365,40 @@ headers:{
 "Content-Type":"application/json"
 },
 
-body:JSON.stringify({coordinates:coords})
+body:JSON.stringify(body)
 
 })
 
 let data=await res.json()
 
-let route=data.routes[0]
+let order=data.routes[0].steps
+.filter(s=>s.type==="job")
+.map(s=>s.id)
+
+let optimizedCoords=[]
+let optimizedAddresses=[]
+
+order.forEach(i=>{
+optimizedCoords.push(coords[i].location)
+optimizedAddresses.push(addresses[i])
+})
+
+let res2=await fetch("https://api.openrouteservice.org/v2/directions/driving-car",{
+
+method:"POST",
+
+headers:{
+"Authorization":apiKey,
+"Content-Type":"application/json"
+},
+
+body:JSON.stringify({coordinates:optimizedCoords})
+
+})
+
+let routeDataAPI=await res2.json()
+
+let route=routeDataAPI.routes[0]
 
 routeData=[]
 
@@ -359,21 +408,20 @@ let total=0
 route.segments.forEach((seg,i)=>{
 
 let km=(seg.distance/1000).toFixed(2)
-
 let cost=(km*0.85).toFixed(2)
 
 total+=parseFloat(cost)
 
 routeData.push({
 ordem:i+1,
-endereco:addresses[i],
+endereco:optimizedAddresses[i],
 km:km,
 valor:cost
 })
 
 html+=`<p style="margin-bottom:10px">
 <b>Parada ${i+1}</b><br>
-${addresses[i]}<br>
+${optimizedAddresses[i]}<br>
 Distância: ${km} km<br>
 Custo: <b>R$ ${cost}</b>
 </p>`
