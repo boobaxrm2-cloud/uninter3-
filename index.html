@@ -18,157 +18,86 @@
         }
 
         body, html {
-            margin: 0;
-            padding: 0;
-            height: 100%;
+            margin: 0; padding: 0; height: 100%;
             font-family: 'Roboto', sans-serif;
             background-color: var(--dark-bg);
-            color: white;
-            overflow: hidden;
+            color: white; overflow: hidden;
         }
 
-        /* Design Futurista */
         h1, h2 { font-family: 'Orbitron', sans-serif; text-transform: uppercase; letter-spacing: 2px; }
-
         #app-container { display: flex; height: 100vh; }
 
-        /* Painel Lateral */
         #side-panel {
-            width: 400px;
-            background: var(--panel-bg);
+            width: 400px; background: var(--panel-bg);
             border-right: 1px solid var(--glass-border);
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
-            z-index: 1000;
-            box-shadow: 10px 0 30px rgba(0,0,0,0.5);
+            padding: 20px; display: flex; flex-direction: column;
+            z-index: 1000; box-shadow: 10px 0 30px rgba(0,0,0,0.5);
             overflow-y: auto;
         }
 
         .header-logo { color: var(--neon-blue); text-shadow: 0 0 10px var(--neon-blue); margin-bottom: 20px; }
-
         .input-group { margin-bottom: 15px; position: relative; }
         
         input {
-            width: 100%;
-            background: rgba(255,255,255,0.05);
-            border: 1px solid var(--glass-border);
-            padding: 12px;
-            color: white;
-            border-radius: 5px;
-            box-sizing: border-box;
-            outline: none;
-            transition: 0.3s;
+            width: 100%; background: rgba(255,255,255,0.05);
+            border: 1px solid var(--glass-border); padding: 12px;
+            color: white; border-radius: 5px; box-sizing: border-box;
+            outline: none; transition: 0.3s;
         }
         input:focus { border-color: var(--neon-blue); box-shadow: 0 0 10px rgba(0,212,255,0.2); }
 
-        .stop-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+        .stop-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; position: relative; }
         .remove-btn { color: #ff4d4d; cursor: pointer; font-size: 1.2rem; transition: 0.3s; }
         .remove-btn:hover { transform: scale(1.2); }
 
-        /* Autocomplete List */
         .autocomplete-list {
-            position: absolute;
-            top: 100%;
-            left: 0;
-            right: 0;
-            background: #1a1c26;
-            border: 1px solid var(--neon-blue);
-            z-index: 2000;
-            max-height: 200px;
-            overflow-y: auto;
-            border-radius: 0 0 5px 5px;
+            position: absolute; top: 100%; left: 0; right: 0;
+            background: #1a1c26; border: 1px solid var(--neon-blue);
+            z-index: 2000; max-height: 200px; overflow-y: auto; border-radius: 0 0 5px 5px;
         }
         .autocomplete-item { padding: 10px; cursor: pointer; border-bottom: 1px solid rgba(255,255,255,0.1); font-size: 0.85rem; }
         .autocomplete-item:hover { background: var(--neon-blue); color: black; }
 
-        /* Botões */
         .btn {
-            padding: 12px;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            font-weight: bold;
-            text-transform: uppercase;
-            margin-top: 10px;
-            transition: 0.3s;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
+            padding: 12px; border: none; border-radius: 5px;
+            cursor: pointer; font-weight: bold; text-transform: uppercase;
+            margin-top: 10px; transition: 0.3s; display: flex;
+            align-items: center; justify-content: center; gap: 8px;
         }
         .btn-add { background: transparent; border: 1px dashed var(--neon-blue); color: var(--neon-blue); }
-        .btn-add:hover { background: rgba(0,212,255,0.1); }
         .btn-main { background: var(--neon-blue); color: black; margin-top: 20px; }
-        .btn-main:hover { box-shadow: 0 0 20px var(--neon-blue); }
         .btn-clear { background: #333; color: white; }
 
-        /* Toggle Almoço */
         .switch-container {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-top: 20px;
-            padding: 10px;
-            background: rgba(255,255,255,0.02);
-            border-radius: 5px;
+            display: flex; align-items: center; justify-content: space-between;
+            margin-top: 20px; padding: 10px; background: rgba(255,255,255,0.02); border-radius: 5px;
         }
         .switch { position: relative; display: inline-block; width: 50px; height: 24px; }
         .switch input { opacity: 0; width: 0; height: 0; }
-        .slider {
-            position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
-            background-color: #333; transition: .4s; border-radius: 34px;
-        }
-        .slider:before {
-            position: absolute; content: ""; height: 16px; width: 16px; left: 4px; bottom: 4px;
-            background-color: white; transition: .4s; border-radius: 50%;
-        }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #333; transition: .4s; border-radius: 34px; }
+        .slider:before { position: absolute; content: ""; height: 16px; width: 16px; left: 4px; bottom: 4px; background-color: white; transition: .4s; border-radius: 50%; }
         input:checked + .slider { background-color: var(--neon-blue); }
         input:checked + .slider:before { transform: translateX(26px); }
 
-        /* Mapa */
         #map { flex-grow: 1; height: 100vh; }
 
-        /* Pop-up de Resultado */
         #modal-overlay {
-            display: none;
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.85);
-            z-index: 3000;
-            justify-content: center; align-items: center;
-            backdrop-filter: blur(5px);
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85); z-index: 3000; justify-content: center; align-items: center; backdrop-filter: blur(5px);
         }
         .modal-content {
-            background: #111;
-            border: 2px solid var(--neon-blue);
-            padding: 40px;
-            border-radius: 15px;
-            width: 80%;
-            max-width: 600px;
-            box-shadow: 0 0 50px rgba(0,212,255,0.3);
-            position: relative;
+            background: #111; border: 2px solid var(--neon-blue); padding: 40px;
+            border-radius: 15px; width: 80%; max-width: 600px; box-shadow: 0 0 50px rgba(0,212,255,0.3); position: relative;
         }
         .close-modal { position: absolute; top: 15px; right: 20px; font-size: 25px; cursor: pointer; color: var(--neon-blue); }
 
-        /* Loading */
         #loading {
-            display: none;
-            position: fixed;
-            top: 50%; left: 50%; transform: translate(-50%, -50%);
-            z-index: 4000;
-            text-align: center;
+            display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            z-index: 4000; text-align: center;
         }
-        .spinner {
-            width: 50px; height: 50px;
-            border: 5px solid rgba(0,212,255,0.1);
-            border-top: 5px solid var(--neon-blue);
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-        }
+        .spinner { width: 50px; height: 50px; border: 5px solid rgba(0,212,255,0.1); border-top: 5px solid var(--neon-blue); border-radius: 50%; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
-        /* Tabela de Resultados */
         .result-table { width: 100%; border-collapse: collapse; margin-top: 20px; }
         .result-table th, .result-table td { padding: 10px; border-bottom: 1px solid #333; text-align: left; }
         .result-table th { color: var(--neon-blue); }
@@ -184,7 +113,7 @@
     <div id="app-container">
         <aside id="side-panel">
             <h1 class="header-logo">FLUXOMED</h1>
-            <p style="font-size: 0.8rem; margin-top: -15px; color: #888; margin-bottom: 30px;">SISTEMA DE ROTEIRIZAÇÃO V1.0</p>
+            <p style="font-size: 0.8rem; margin-top: -15px; color: #888; margin-bottom: 30px;">SISTEMA DE ROTEIRIZAÇÃO V1.1</p>
 
             <div class="input-group">
                 <label>TÉCNICO RESPONSÁVEL</label>
@@ -192,15 +121,9 @@
             </div>
 
             <div id="stops-container">
-                <div class="stop-row" data-index="0">
+                <div class="stop-row">
                     <div style="flex-grow: 1; position: relative;">
-                        <input type="text" class="address-input" placeholder="Endereço de partida (Ponto 1)" autocomplete="off">
-                        <div class="autocomplete-list"></div>
-                    </div>
-                </div>
-                <div class="stop-row" data-index="1">
-                    <div style="flex-grow: 1; position: relative;">
-                        <input type="text" class="address-input" placeholder="Endereço de destino (Ponto 2)" autocomplete="off">
+                        <input type="text" class="address-input" placeholder="Endereço de partida" autocomplete="off">
                         <div class="autocomplete-list"></div>
                     </div>
                 </div>
@@ -246,36 +169,37 @@
     <script>
         const apiKey = 'eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6IjBkNDRmZDJkNmQzMTRkZWQ4YWYyZGIzODY1NzViNjA5IiwiaCI6Im11cm11cjY0In0=';
         let map, routeLayer, markers = [];
-        let stopsCoords = []; // Armazena {lat, lng, name}
-        let routeData = []; // Para exportação
+        let stopsCoords = []; 
+        let routeData = [];
 
-        // Inicializa Mapa
         function initMap() {
-            map = L.map('map', { zoomControl: false }).setView([-22.79, -43.31], 12);
+            map = L.map('map', { zoomControl: false }).setView([-22.90, -43.17], 12);
             L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
                 attribution: '&copy; OpenStreetMap'
             }).addTo(map);
             L.control.zoom({ position: 'bottomright' }).addTo(map);
         }
 
-        // Adicionar nova parada
         function addNewStop() {
             const container = document.getElementById('stops-container');
-            const index = container.children.length;
             const div = document.createElement('div');
             div.className = 'stop-row';
             div.innerHTML = `
                 <div style="flex-grow: 1; position: relative;">
-                    <input type="text" class="address-input" placeholder="Parada ${index + 1}" autocomplete="off">
+                    <input type="text" class="address-input" placeholder="Novo endereço" autocomplete="off">
                     <div class="autocomplete-list"></div>
                 </div>
-                <i class="fas fa-trash remove-btn" onclick="this.parentElement.remove(); updateMarkers();"></i>
+                <i class="fas fa-trash remove-btn" onclick="removeStop(this)"></i>
             `;
             container.appendChild(div);
             setupAutocomplete(div.querySelector('.address-input'));
         }
 
-        // Autocomplete
+        function removeStop(btn) {
+            btn.parentElement.remove();
+            updateMarkers();
+        }
+
         function setupAutocomplete(input) {
             let timeout;
             input.addEventListener('input', () => {
@@ -285,13 +209,15 @@
                 if (query.length < 3) { list.innerHTML = ''; return; }
 
                 timeout = setTimeout(async () => {
-                    const res = await fetch(`https://api.openrouteservice.org/geocode/search?api_key=${apiKey}&text=${query}&boundary.country=BR&size=5`);
+                    // MUDANÇA AQUI: Usando geocode/autocomplete com foco em address e venue para maior precisão
+                    const res = await fetch(`https://api.openrouteservice.org/geocode/autocomplete?api_key=${apiKey}&text=${encodeURIComponent(query)}&boundary.country=BR&layers=address,venue,point&size=10`);
                     const data = await res.json();
                     
                     list.innerHTML = '';
                     data.features.forEach(f => {
                         const item = document.createElement('div');
                         item.className = 'autocomplete-item';
+                        // Mostra o label completo (incluindo número se disponível)
                         item.innerText = f.properties.label;
                         item.onclick = () => {
                             input.value = f.properties.label;
@@ -302,11 +228,10 @@
                         };
                         list.appendChild(item);
                     });
-                }, 500);
+                }, 400);
             });
         }
 
-        // Atualiza Pins no Mapa
         function updateMarkers() {
             markers.forEach(m => map.removeLayer(m));
             markers = [];
@@ -324,14 +249,12 @@
 
             if (markers.length > 0) {
                 const group = new L.featureGroup(markers);
-                map.fitBounds(group.getBounds().pad(0.5));
+                map.fitBounds(group.getBounds().pad(0.3));
             }
         }
 
-        // Cálculo da Rota
         async function calculateRoute() {
             if (stopsCoords.length < 2) { alert("Insira pelo menos 2 endereços."); return; }
-
             document.getElementById('loading').style.display = 'block';
             if (routeLayer) map.removeLayer(routeLayer);
 
@@ -345,20 +268,18 @@
                 });
                 const data = await response.json();
 
-                // Desenha linha azul
                 routeLayer = L.geoJSON(data, {
                     style: { color: '#00d4ff', weight: 5, opacity: 0.7 }
                 }).addTo(map);
 
                 processResults(data.features[0].properties.segments);
             } catch (error) {
-                alert("Erro ao calcular rota. Verifique a chave API ou endereços.");
+                alert("Erro ao calcular rota.");
             } finally {
                 document.getElementById('loading').style.display = 'none';
             }
         }
 
-        // Processa Valores e Modal
         function processResults(segments) {
             let totalKm = 0;
             let html = `<table class="result-table">
@@ -369,7 +290,6 @@
             const lunchCost = document.getElementById('lunch-toggle').checked ? 25.90 : 0;
             const tech = document.getElementById('tech-name').value || "Não informado";
 
-            // Ponto Inicial
             html += `<tr><td>1</td><td>${stopsCoords[0].name}</td><td>0</td><td>R$ 0,00</td></tr>`;
             routeData.push({ordem: 1, endereco: stopsCoords[0].name, km: 0, custo: 0});
 
@@ -396,15 +316,12 @@
                     <h3 style="color: var(--neon-blue)">TOTAL: R$ ${totalServiceCost.toFixed(2)}</h3>
                 </div>`;
 
-            // Armazena totais para o excel
             routeData.total = totalServiceCost;
             routeData.tech = tech;
-
             document.getElementById('modal-body').innerHTML = html;
             document.getElementById('modal-overlay').style.display = 'flex';
         }
 
-        // Exportação Excel
         function exportToExcel() {
             const wsData = [
                 ["RELATÓRIO DE VISITA - FLUXOMED"],
@@ -412,11 +329,7 @@
                 [],
                 ["Ordem da Visita", "Endereço da Visita", "KM (desde último ponto)", "Custo Calculado (R$)"]
             ];
-
-            routeData.forEach(row => {
-                wsData.push([row.ordem, row.endereco, row.km, row.custo]);
-            });
-
+            routeData.forEach(row => wsData.push([row.ordem, row.endereco, row.km, row.custo]));
             wsData.push([]);
             wsData.push(["TOTAL DO DIA", "", "", routeData.total.toFixed(2)]);
 
@@ -426,15 +339,9 @@
             XLSX.writeFile(wb, `Rota_Fluxomed_${routeData.tech}.xlsx`);
         }
 
-        function clearAll() {
-            location.reload();
-        }
+        function clearAll() { location.reload(); }
+        function closeModal() { document.getElementById('modal-overlay').style.display = 'none'; }
 
-        function closeModal() {
-            document.getElementById('modal-overlay').style.display = 'none';
-        }
-
-        // Inicia
         window.onload = () => {
             initMap();
             document.querySelectorAll('.address-input').forEach(setupAutocomplete);
@@ -442,6 +349,7 @@
     </script>
 </body>
 </html>
+
 
 
 
