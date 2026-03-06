@@ -228,6 +228,183 @@
             input.dataset.lat = lat;
             input.dataset.lng = lng;
             el.parentElement.innerHTML = '';
+            updateMarkers();
+        }
+
+        function updateMarkers() {
+            markers.forEach(m => map.removeLayer(m));
+            markers = [];
+            const inputs = document.querySelectorAll('.address-input');
+            stopsData = [];
+
+            inputs.forEach((inp, i) => {
+                if (inp.dataset.lat) {
+                    const latlng = [parseFloat(inp.dataset.lat), parseFloat(inp.dataset.lng)];
+                    const m = L.marker(latlng).addTo(map).bindPopup(`<b>Parada ${i+1}</b><br>${inp.value}`);
+                    markers.push(m);
+                    stopsData.push({ lat: inp.dataset.lat, lng: inp.dataset.lng, name: inp.value });
+                }
+            });
+
+            if (markers.length > 0) {
+                const group = new L.featureGroup(markers);
+                map.fitBounds(group.getBounds().pad(0.3));
+            }
+        }
+
+        async function optimizeRoute() {
+            if (stopsData.length < 3) { alert("Adicione pelo menos 3 endereços para otimizar."); return; }
+            showLoading(true);
+
+            const jobs = stopsData.map((s, i) => ({
+                id: i,
+                location: [parseFloat(s.lng), parseFloat(s.lat)]
+            }));
+
+            try {
+                const res = await fetch(`https://api.openrouteservice.org/optimization`, {
+                    method: 'POST',
+                    headers: { 'Authorization': apiKey, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        jobs: jobs,
+                        vehicles: [{
+                            id: 1,
+                            profile: 'driving-car',
+                            start: jobs[0].location // Mantém o primeiro como início
+                        }]
+                    })
+                });
+                const data = await res.json();
+                
+                // Reordenar inputs no HTML baseado na resposta da API
+                const optimizedOrder = data.routes[0].steps.map(step => step.id || 0);
+                const container = document.getElementById('stops-container');
+                const currentData = [...stopsData];
+                
+                container.innerHTML = '';
+                optimizedOrder.forEach((idx) => {
+                    addNewStop();
+                    const lastInp = container.lastElementChild.querySelector('input');
+                    lastInp.value = currentData[idx].name;
+                    lastInp.dataset.lat = currentData[idx].lat;
+                    lastInp.dataset.lng = currentData[idx].lng;
+                });
+                updateMarkers();
+            } catch (e) { alert("Erro ao otimizar. Verifique os endereços."); }
+            showLoading(false);
+        }
+
+        async function calculateFinalRoute() {
+            if (stopsData.length < 2) { alert("Selecione pelo menos 2 endereços."); return; }
+            showLoading(true);
+            
+            const coordinates = stopsData.map(s => [parseFloat(s.lng), parseFloat(s.lat)]);
+            
+            try {
+                const res = await fetch(`https://api.openrouteservice.org/v2/directions/driving-car/geojson`, {
+                    method: 'POST',
+                    headers: { 'Authorization': apiKey, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ coordinates, extra_info: ["tolls"] })
+                });
+                const data = await res.json();
+                
+                if (routeLayer) map.removeLayer(routeLayer);
+                routeLayer = L.geoJSON(data, { style: { color: '#00d4ff', weight: 6, opacity: 0.8 } }).addTo(map);
+                
+                // Cálculo de Pedágios
+                let tolls = 0;
+                const extras = data.features[0].properties.extras;
+                if(extras && extras.tolls) {
+                    tolls = extras.tolls.values.filter(v => v[2] === 1).length;
+                }
+
+                showSummary(data.features[0].properties, tolls);
+            } catch (e) { alert("Erro ao traçar rota."); }
+            showLoading(false);
+        }
+
+        function showSummary(props, tollCount) {
+            const distKm = (props.summary.distance / 1000).toFixed(2);
+            const tollPrice = parseFloat(document.getElementById('toll-price').value);
+            const totalTollsPrice = tollCount * tollPrice;
+            const tech = document.getElementById('tech-name').value || "Não Identificado";
+            const finalCost = (distKm * 0.85) + totalTollsPrice;
+
+            let html = `
+                <p><b>Técnico:</b> ${tech}</p>
+                <div style="display:flex; justify-content: space-between; background: rgba(0,212,255,0.1); padding: 10px; border-radius:5px;">
+                    <span>Distância: <b>${distKm} km</b></span>
+                    <span>Pedágios: <b>${tollCount}</b></span>
+                </div>
+                <table class="result-table">
+                    <tr><th>#</th><th>Endereço da Visita</th></tr>
+            `;
+            stopsData.forEach((s, i) => {
+                html += `<tr><td>${i+1}</td><td>${s.name}</td></tr>`;
+            });
+            html += `</table>
+                <h2 style="color:var(--neon-blue); text-align:right;">Total Reembolso: R$ ${finalCost.toFixed(2)}</h2>
+            `;
+            
+            document.getElementById('modal-body').innerHTML = html;
+            document.getElementById('modal-overlay').style.display = 'flex';
+            
+            // Dados globais para exportação
+            window.currentReport = { tech, distKm, tollCount, finalCost, list: stopsData };
+        }
+
+        async function downloadPDF() {
+            const { jsPDF } = window.jspdf;
+            const pdf = new jsPDF();
+            showLoading(true);
+
+            const mapCanvas = await html2canvas(document.getElementById('map'));
+            const mapImg = mapCanvas.toDataURL('image/png');
+
+            pdf.setFont("Orbitron", "bold");
+            pdf.text("FLUXOMED - ROTEIRO DE VISITAS", 10, 15);
+            pdf.setFont("Roboto", "normal");
+            pdf.setFontSize(10);
+            pdf.text(`Técnico: ${window.currentReport.tech} | Data: ${new Date().toLocaleDateString()}`, 10, 22);
+            
+            pdf.addImage(mapImg, 'PNG', 10, 30, 190, 100);
+            
+            let y = 145;
+            pdf.text("SEQUÊNCIA DE VISITAS:", 10, y);
+            window.currentReport.list.forEach((s, i) => {
+                y += 8;
+                pdf.text(`${i+1}. ${s.name}`, 12, y);
+            });
+
+            pdf.save(`Rota_${window.currentReport.tech}.pdf`);
+            showLoading(false);
+        }
+
+        function exportToExcel() {
+            const data = [
+                ["RELATÓRIO DE VISITAS - FLUXOMED"],
+                ["Técnico", window.currentReport.tech],
+                ["Distância Total", window.currentReport.distKm + " km"],
+                ["Pedágios", window.currentReport.tollCount],
+                ["Custo Total", "R$ " + window.currentReport.finalCost.toFixed(2)],
+                [],
+                ["Ordem", "Endereço"]
+            ];
+            window.currentReport.list.forEach((s, i) => data.push([i+1, s.name]));
+            
+            const ws = XLSX.utils.aoa_to_sheet(data);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Roteiro");
+            XLSX.writeFile(wb, `Planilha_Fluxomed_${window.currentReport.tech}.xlsx`);
+        }
+
+        function showLoading(show) { document.getElementById('loading-screen').style.display = show ? 'flex' : 'none'; }
+        function closeModal() { document.getElementById('modal-overlay').style.display = 'none'; }
+
+        window.onload = initMap;
+    </script>
+</body>
+</html>
 
 
 
