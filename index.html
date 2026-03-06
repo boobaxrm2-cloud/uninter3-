@@ -1,137 +1,93 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-br">
 <head>
 <meta charset="UTF-8">
 <title>Roteiro de Visitas Fluxomed</title>
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
 
-<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
-
 <style>
 
 body{
-margin:0;
-background:#05070d;
+background:#000814;
 font-family:Arial;
 color:white;
+margin:0;
 overflow:hidden;
 }
 
-#map{
-position:absolute;
-right:0;
-width:70%;
+.container{
+display:flex;
 height:100vh;
 }
 
-.panel{
-position:absolute;
-left:0;
-width:30%;
-height:100vh;
-background:#0b0f1a;
-padding:25px;
-overflow:auto;
-box-shadow:0 0 40px #0af3;
+/* PAINEL */
+.painel{
+width:420px;
+background:#0b1a2a;
+padding:20px;
+box-shadow:0 0 40px rgba(0,0,0,0.7);
+z-index:2;
+position:relative;
+}
 
-/* divisão suave com o mapa */
-border-right:1px solid rgba(0,170,255,0.25);
-
+/* DIVISOR SUAVE */
+.divisor{
+width:6px;
 background:linear-gradient(
 to right,
-#0b0f1a 85%,
-rgba(11,15,26,0.95) 92%,
-rgba(11,15,26,0.8) 96%,
-transparent
+rgba(0,0,0,0),
+rgba(0,180,255,0.6),
+rgba(0,0,0,0)
 );
+box-shadow:0 0 20px rgba(0,180,255,0.4);
 }
 
-h1{
-color:#0af;
+/* MAPA */
+#map{
+flex:1;
 }
 
+/* INPUT */
 input{
 width:100%;
-padding:12px;
+padding:10px;
 margin-top:10px;
-border-radius:6px;
 border:none;
-background:#101726;
-color:white;
+border-radius:6px;
+font-size:14px;
 }
+
+/* BOTÕES */
 
 button{
-margin-top:10px;
+width:100%;
 padding:12px;
+margin-top:10px;
 border:none;
 border-radius:6px;
-cursor:pointer;
-background:#0af;
-color:white;
 font-weight:bold;
-width:100%;
-}
-
-.stop{
-position:relative;
-margin-bottom:15px;
-}
-
-.remove{
-position:absolute;
-right:8px;
-top:14px;
 cursor:pointer;
-color:red;
+background:#0ea5e9;
+color:white;
+transition:0.3s;
 }
 
-.suggestions{
-background:#111;
+button:hover{
+background:#0284c7;
+}
+
+/* RESULTADO */
+
+#resultado{
 position:absolute;
-top:42px;
-left:0;
-width:100%;
-max-height:150px;
-overflow-y:auto;
-border-radius:6px;
-border:1px solid #0af;
-z-index:9999;
-}
-
-.suggestions div{
-padding:8px;
-cursor:pointer;
-}
-
-.suggestions div:hover{
-background:#0af;
-}
-
-.popup{
-position:fixed;
-left:32%;
-top:120px;
-background:#0b0f1a;
-padding:25px;
-border-radius:12px;
-box-shadow:0 0 40px #0af;
-display:none;
-width:320px;
-z-index:99999;
-animation:fadeIn .3s ease;
-}
-
-@keyframes fadeIn{
-from{
-opacity:0;
-transform:translateY(-10px);
-}
-to{
-opacity:1;
-transform:translateY(0);
-}
+bottom:30px;
+left:30px;
+background:#02101d;
+padding:20px;
+border-radius:10px;
+box-shadow:0 0 25px rgba(0,0,0,0.8);
+width:260px;
 }
 
 </style>
@@ -139,378 +95,193 @@ transform:translateY(0);
 
 <body>
 
-<div class="panel">
+<div class="container">
 
-<h1>Roteiro de Visitas Fluxomed</h1>
+<div class="painel">
 
-<div id="stops"></div>
+<h2>Roteiro de Visitas Fluxomed</h2>
 
-<button onclick="addStop()">Adicionar endereço</button>
+<input id="origem" placeholder="Endereço inicial">
 
-<button onclick="calculateRoute()">Roteirizar Rotas</button>
+<div id="enderecos"></div>
 
-<button onclick="clearRoute()">Limpar rota</button>
+<button onclick="addEndereco()">Adicionar endereço</button>
+
+<button onclick="roteirizar()">Roteirizar Rotas</button>
+
+<button onclick="limpar()">Limpar rota</button>
+
+<input id="valorKm" placeholder="Valor por KM (R$)" type="number">
 
 </div>
+
+<div class="divisor"></div>
 
 <div id="map"></div>
 
-<div id="popup" class="popup">
-<h2>Resumo da Rota</h2>
-<div id="summary"></div>
-<button onclick="downloadExcel()">Baixar Excel</button>
-<button onclick="closePopup()">Fechar</button>
 </div>
+
+<div id="resultado"></div>
+
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 
 <script>
 
-const apiKey="eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6IjBkNDRmZDJkNmQzMTRkZWQ4YWYyZGIzODY1NzViNjA5IiwiaCI6Im11cm11cjY0In0="
+var map = L.map('map').setView([-22.574, -43.278], 12);
 
-let map=L.map('map').setView([-22.9,-43.2],12)
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
+maxZoom:19
+}).addTo(map);
 
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map)
+var enderecos = [];
+var marcadores = [];
+var rotaLayer = null;
 
-let markers=[]
-let routeLine=null
-let routeData=[]
+function addEndereco(){
 
-function addStop(){
+let container = document.getElementById("enderecos");
 
-let div=document.createElement("div")
-div.className="stop"
+let input = document.createElement("input");
+input.placeholder="Destino";
 
-let input=document.createElement("input")
-input.placeholder="Digite um endereço"
+container.appendChild(input);
 
-let suggestions=document.createElement("div")
-suggestions.className="suggestions"
-suggestions.style.display="none"
-
-let remove=document.createElement("span")
-remove.innerHTML="✖"
-remove.className="remove"
-
-remove.onclick=()=>div.remove()
-
-let timeout=null
-
-input.addEventListener("input",()=>{
-
-clearTimeout(timeout)
-timeout=setTimeout(()=>searchAddress(input,suggestions),400)
-
-})
-
-div.appendChild(input)
-div.appendChild(remove)
-div.appendChild(suggestions)
-
-document.getElementById("stops").appendChild(div)
+enderecos.push(input);
 
 }
 
-async function searchAddress(input,suggestions){
+async function geocode(endereco){
 
-let query=input.value
+let url=`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(endereco)}`;
 
-if(query.length<3){
-suggestions.style.display="none"
-return
-}
+let res=await fetch(url);
+let data=await res.json();
 
-let res=await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}`)
+if(data.length==0) return null;
 
-let data=await res.json()
-
-suggestions.innerHTML=""
-
-data.forEach(place=>{
-
-let item=document.createElement("div")
-
-item.innerText=place.display_name
-
-item.onclick=()=>{
-
-input.value=place.display_name
-input.dataset.lat=place.lat
-input.dataset.lon=place.lon
-
-suggestions.style.display="none"
-
-updateMap()
+return [parseFloat(data[0].lat),parseFloat(data[0].lon)];
 
 }
 
-suggestions.appendChild(item)
+/* OTIMIZAÇÃO SIMPLES (vizinho mais próximo) */
 
-})
+function otimizar(pontos){
 
-suggestions.style.display="block"
+let rota=[pontos[0]];
+let restantes=pontos.slice(1);
+
+while(restantes.length){
+
+let ultimo=rota[rota.length-1];
+
+let menorDist=999999;
+let indice=0;
+
+for(let i=0;i<restantes.length;i++){
+
+let d=map.distance(ultimo,restantes[i]);
+
+if(d<menorDist){
+menorDist=d;
+indice=i;
+}
 
 }
 
-addStop()
-addStop()
-
-async function updateMap(){
-
-let coords=[]
-
-markers.forEach(m=>map.removeLayer(m))
-markers=[]
-
-document.querySelectorAll("#stops input").forEach(i=>{
-
-if(i.dataset.lat){
-
-let lat=parseFloat(i.dataset.lat)
-let lon=parseFloat(i.dataset.lon)
-
-coords.push([lon,lat])
-
-let marker=L.marker([lat,lon]).addTo(map)
-
-markers.push(marker)
+rota.push(restantes[indice]);
+restantes.splice(indice,1);
 
 }
 
-})
-
-if(coords.length<2) return
-
-let res=await fetch("https://api.openrouteservice.org/v2/directions/driving-car",{
-
-method:"POST",
-headers:{
-"Authorization":apiKey,
-"Content-Type":"application/json"
-},
-
-body:JSON.stringify({coordinates:coords})
-
-})
-
-let data=await res.json()
-
-let route=data.routes[0]
-
-let decoded=decodePolyline(route.geometry)
-
-animateRoute(decoded)
-
-map.fitBounds(L.polyline(decoded).getBounds())
+return rota;
 
 }
 
-function animateRoute(coords){
+/* DESENHO ANIMADO DA ROTA */
 
-if(routeLine) map.removeLayer(routeLine)
+function desenharRotaAnimada(coords){
 
-routeLine=L.polyline([],{color:"#00aaff",weight:6}).addTo(map)
+if(rotaLayer) map.removeLayer(rotaLayer);
 
-let i=0
+rotaLayer=L.polyline([],{color:"cyan",weight:5}).addTo(map);
 
-let interval=setInterval(()=>{
+let i=0;
 
-routeLine.addLatLng(coords[i])
+let intervalo=setInterval(()=>{
 
-i++
+rotaLayer.addLatLng(coords[i]);
+
+i++;
 
 if(i>=coords.length){
-clearInterval(interval)
+clearInterval(intervalo);
 }
 
-},20)
-
-}
-
-async function calculateRoute(){
-
-let coords=[]
-let addresses=[]
-
-document.querySelectorAll("#stops input").forEach(i=>{
-
-if(i.dataset.lat){
-
-coords.push({
-location:[parseFloat(i.dataset.lon),parseFloat(i.dataset.lat)]
-})
-
-addresses.push(i.value)
+},120);
 
 }
 
-})
+/* ROTEIRIZAR */
 
-if(coords.length < 2){
-alert("Adicione pelo menos dois endereços.")
-return
+async function roteirizar(){
+
+let origem=document.getElementById("origem").value;
+
+let pontos=[];
+
+let geo=await geocode(origem);
+
+if(!geo){
+alert("Origem não encontrada");
+return;
 }
 
-let body={
-jobs:coords.map((c,i)=>({
-id:i,
-location:c.location
-}))
-}
+pontos.push(geo);
 
-let res=await fetch("https://api.openrouteservice.org/optimization",{
+for(let input of enderecos){
 
-method:"POST",
+let g=await geocode(input.value);
 
-headers:{
-"Authorization":apiKey,
-"Content-Type":"application/json"
-},
-
-body:JSON.stringify(body)
-
-})
-
-let data=await res.json()
-
-let order=data.routes[0].steps
-.filter(s=>s.type==="job")
-.map(s=>s.id)
-
-let optimizedCoords=[]
-let optimizedAddresses=[]
-
-order.forEach(i=>{
-optimizedCoords.push(coords[i].location)
-optimizedAddresses.push(addresses[i])
-})
-
-let res2=await fetch("https://api.openrouteservice.org/v2/directions/driving-car",{
-
-method:"POST",
-
-headers:{
-"Authorization":apiKey,
-"Content-Type":"application/json"
-},
-
-body:JSON.stringify({coordinates:optimizedCoords})
-
-})
-
-let routeDataAPI=await res2.json()
-
-let route=routeDataAPI.routes[0]
-
-routeData=[]
-
-let html=""
-let total=0
-
-route.segments.forEach((seg,i)=>{
-
-let km=(seg.distance/1000).toFixed(2)
-let cost=(km*0.85).toFixed(2)
-
-total+=parseFloat(cost)
-
-routeData.push({
-ordem:i+1,
-endereco:optimizedAddresses[i],
-km:km,
-valor:cost
-})
-
-html+=`<p style="margin-bottom:10px">
-<b>Parada ${i+1}</b><br>
-${optimizedAddresses[i]}<br>
-Distância: ${km} km<br>
-Custo: <b>R$ ${cost}</b>
-</p>`
-
-})
-
-html+=`<h3>Total: R$ ${total.toFixed(2)}</h3>`
-
-document.getElementById("summary").innerHTML=html
-document.getElementById("popup").style.display="block"
+if(g) pontos.push(g);
 
 }
 
-function decodePolyline(str,precision=5){
+let otimizada=otimizar(pontos);
 
-let index=0,lng=0,lat=0,coords=[]
-const factor=Math.pow(10,precision)
+desenharRotaAnimada(otimizada);
 
-while(index<str.length){
+map.fitBounds(otimizada);
 
-let b,shift=0,result=0
+let distancia=0;
 
-do{
-b=str.charCodeAt(index++)-63
-result|=(b&0x1f)<<shift
-shift+=5
-}while(b>=0x20)
+for(let i=0;i<otimizada.length-1;i++){
 
-let dlat=((result&1)?~(result>>1):(result>>1))
-lat+=dlat
-
-shift=0
-result=0
-
-do{
-b=str.charCodeAt(index++)-63
-result|=(b&0x1f)<<shift
-shift+=5
-}while(b>=0x20)
-
-let dlng=((result&1)?~(result>>1):(result>>1))
-lng+=dlng
-
-coords.push([lat/factor,lng/factor])
+distancia+=map.distance(otimizada[i],otimizada[i+1]);
 
 }
 
-return coords
+distancia=distancia/1000;
+
+let valor=document.getElementById("valorKm").value || 0;
+
+let custo=(distancia*valor).toFixed(2);
+
+document.getElementById("resultado").innerHTML=
+`
+<h3>Resumo</h3>
+Distância: ${distancia.toFixed(2)} km<br><br>
+Custo estimado: R$ ${custo}
+`;
 
 }
 
-function clearRoute(){
+/* LIMPAR */
 
-if(routeLine) map.removeLayer(routeLine)
+function limpar(){
 
-markers.forEach(m=>map.removeLayer(m))
+if(rotaLayer) map.removeLayer(rotaLayer);
 
-document.getElementById("stops").innerHTML=""
-
-addStop()
-addStop()
-
-}
-
-function closePopup(){
-document.getElementById("popup").style.display="none"
-}
-
-function downloadExcel(){
-
-let data=[["Ordem","Endereço","Km desde última visita","Valor desde último ponto","Valor total rota"]]
-
-let total=0
-
-routeData.forEach(r=>{
-
-total+=parseFloat(r.valor)
-
-data.push([r.ordem,r.endereco,r.km,r.valor,total.toFixed(2)])
-
-})
-
-let ws=XLSX.utils.aoa_to_sheet(data)
-
-let wb=XLSX.utils.book_new()
-
-XLSX.utils.book_append_sheet(wb,ws,"Rota")
-
-XLSX.writeFile(wb,"rota.xlsx")
+document.getElementById("resultado").innerHTML="";
 
 }
 
@@ -518,6 +289,7 @@ XLSX.writeFile(wb,"rota.xlsx")
 
 </body>
 </html>
+
 
 
 
