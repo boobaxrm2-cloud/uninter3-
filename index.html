@@ -12,7 +12,7 @@
     <style>
         :root {
             --bg-color: #050505;
-            --panel-bg: rgba(10, 20, 40, 0.9);
+            --panel-bg: rgba(10, 20, 40, 0.95);
             --neon-blue: #00d2ff;
             --dark-blue: #003366;
             --text-color: #e0e0e0;
@@ -28,23 +28,25 @@
             overflow: hidden;
         }
 
-        h1, h2 { font-family: 'Orbitron', sans-serif; text-transform: uppercase; letter-spacing: 2px; }
+        h1 { font-family: 'Orbitron', sans-serif; font-size: 1.5rem; margin-bottom: 5px; color: #fff; }
+        h2 { font-family: 'Orbitron', sans-serif; font-size: 1.1rem; }
 
         #main-container { display: flex; height: 100vh; }
 
         /* Painel Lateral */
         #side-panel {
-            width: 400px;
+            width: 420px;
             background: var(--panel-bg);
             border-right: 2px solid var(--neon-blue);
-            padding: 20px;
-            box-shadow: 10px 0 20px rgba(0, 210, 255, 0.2);
+            padding: 25px;
+            box-shadow: 10px 0 30px rgba(0, 210, 255, 0.15);
             z-index: 1000;
             overflow-y: auto;
-            backdrop-filter: blur(10px);
+            backdrop-filter: blur(15px);
         }
 
-        .input-group { margin-bottom: 15px; position: relative; }
+        .input-group { margin-bottom: 20px; position: relative; }
+        label { display: block; margin-bottom: 8px; font-size: 0.85rem; color: var(--neon-blue); text-transform: uppercase; }
         
         input[type="text"] {
             width: 100%;
@@ -57,27 +59,29 @@
             transition: 0.3s;
         }
 
-        input:focus { outline: none; border-color: var(--neon-blue); box-shadow: 0 0 10px var(--neon-blue); }
+        input:focus { outline: none; border-color: var(--neon-blue); box-shadow: 0 0 10px rgba(0, 210, 255, 0.5); }
 
-        .address-item { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+        .address-item { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 15px; }
         
-        .btn-remove { color: #ff4d4d; cursor: pointer; transition: 0.3s; }
-        .btn-remove:hover { transform: scale(1.2); }
+        .btn-remove { color: #ff4d4d; cursor: pointer; margin-top: 12px; transition: 0.3s; font-size: 1.1rem; }
+        .btn-remove:hover { color: #ff0000; transform: scale(1.2); }
 
         .btn {
             width: 100%;
-            padding: 12px;
-            margin-top: 10px;
+            padding: 14px;
+            margin-top: 12px;
             border: none;
             border-radius: 5px;
             cursor: pointer;
             font-family: 'Orbitron', sans-serif;
             font-weight: bold;
+            text-transform: uppercase;
             transition: 0.3s;
+            display: flex; align-items: center; justify-content: center; gap: 10px;
         }
 
         .btn-primary { background: var(--neon-blue); color: #000; }
-        .btn-primary:hover { background: #fff; box-shadow: 0 0 20px var(--neon-blue); }
+        .btn-primary:hover { background: #fff; box-shadow: 0 0 25px var(--neon-blue); }
         
         .btn-secondary { background: transparent; border: 1px solid var(--neon-blue); color: var(--neon-blue); }
         .btn-secondary:hover { background: rgba(0, 210, 255, 0.1); }
@@ -85,12 +89,11 @@
         /* Switch Almoço */
         .switch-container {
             display: flex; align-items: center; justify-content: space-between;
-            margin: 20px 0; padding: 10px; border: 1px dashed var(--dark-blue);
+            margin: 25px 0; padding: 15px; border: 1px solid var(--dark-blue); border-radius: 8px;
+            background: rgba(0, 210, 255, 0.03);
         }
 
-        .switch {
-            position: relative; display: inline-block; width: 50px; height: 24px;
-        }
+        .switch { position: relative; display: inline-block; width: 50px; height: 24px; }
         .switch input { opacity: 0; width: 0; height: 0; }
         .slider {
             position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
@@ -108,29 +111,33 @@
 
         /* Autocomplete List */
         .autocomplete-items {
-            position: absolute; border: 1px solid var(--dark-blue); background: #111;
-            z-index: 99; top: 100%; left: 0; right: 0; max-height: 200px; overflow-y: auto;
+            position: absolute; border: 1px solid var(--neon-blue); background: #0a0a0a;
+            z-index: 1100; top: 100%; left: 0; right: 0; max-height: 250px; overflow-y: auto;
+            border-radius: 0 0 8px 8px; box-shadow: 0 10px 20px rgba(0,0,0,0.5);
         }
-        .autocomplete-items div { padding: 10px; cursor: pointer; border-bottom: 1px solid #222; }
-        .autocomplete-items div:hover { background-color: var(--dark-blue); }
+        .autocomplete-items div { padding: 12px; cursor: pointer; border-bottom: 1px solid #1a1a1a; font-size: 0.9rem; }
+        .autocomplete-items div:hover { background-color: var(--dark-blue); color: #fff; }
 
-        /* Popup Resultado */
+        /* Overlay e Popups */
         #overlay {
             display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.85); z-index: 2000; justify-content: center; align-items: center;
+            background: rgba(0,0,0,0.9); z-index: 2000; justify-content: center; align-items: center;
         }
         #result-popup {
             background: var(--panel-bg); border: 2px solid var(--neon-blue);
-            padding: 30px; border-radius: 15px; width: 500px; text-align: center;
-            box-shadow: 0 0 30px var(--neon-blue);
+            padding: 30px; border-radius: 15px; width: 90%; max-width: 550px; text-align: center;
+            box-shadow: 0 0 50px rgba(0, 210, 255, 0.3);
         }
 
         /* Loading */
-        #loader { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 3000; text-align: center; }
+        #loader { 
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+            background: rgba(0,0,0,0.8); z-index: 3000; flex-direction: column; justify-content: center; align-items: center; 
+        }
         .spinner {
-            width: 80px; height: 80px; border: 8px solid rgba(0, 210, 255, 0.1);
-            border-top: 8px solid var(--neon-blue); border-radius: 50%;
-            animation: spin 1s linear infinite;
+            width: 70px; height: 70px; border: 6px solid rgba(0, 210, 255, 0.1);
+            border-top: 6px solid var(--neon-blue); border-radius: 50%;
+            animation: spin 1s linear infinite; margin-bottom: 20px;
         }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
@@ -140,58 +147,68 @@
 
     <div id="loader">
         <div class="spinner"></div>
-        <p style="font-family: 'Orbitron'; margin-top: 15px;">PROCESSANDO ROTA...</p>
+        <p style="font-family: 'Orbitron'; color: var(--neon-blue); letter-spacing: 2px;">CALCULANDO ROTA...</p>
     </div>
 
     <div id="overlay">
         <div id="result-popup">
             <h2 id="pop-tecnico-nome">Relatório de Visitas</h2>
-            <hr style="border-color: var(--dark-blue)">
-            <div id="summary-content" style="text-align: left; margin: 20px 0;"></div>
-            <button class="btn btn-primary" onclick="downloadExcel()"><i class="fas fa-file-excel"></i> BAIXAR EXCEL</button>
-            <button class="btn btn-secondary" onclick="closePopup()">FECHAR</button>
+            <hr style="border: 0; border-top: 1px solid var(--dark-blue); margin: 15px 0;">
+            <div id="summary-content" style="text-align: left; margin: 20px 0; max-height: 300px; overflow-y: auto;"></div>
+            <button class="btn btn-primary" onclick="downloadExcel()"><i class="fas fa-file-excel"></i> BAIXAR RELATÓRIO EXCEL</button>
+            <button class="btn btn-secondary" onclick="closePopup()">VOLTAR AO MAPA</button>
         </div>
     </div>
 
     <div id="main-container">
         <div id="side-panel">
-            <h1>Fluxomed</h1>
-            <p style="font-size: 0.8em; color: var(--neon-blue);">ROTEIRIZADOR DE VISITAS</p>
+            <h1>FLUXOMED</h1>
+            <p style="font-size: 0.75em; color: var(--neon-blue); margin-top: -5px; margin-bottom: 30px; font-weight: bold;">SISTEMA DE ROTEIRIZAÇÃO INTELIGENTE</p>
             
             <div class="input-group">
-                <label>Nome do Técnico</label>
-                <input type="text" id="tecnico-nome" placeholder="Ex: João Silva">
+                <label><i class="fas fa-user-cog"></i> Nome do Técnico</label>
+                <input type="text" id="tecnico-nome" placeholder="Digite o nome do técnico">
             </div>
 
             <div id="address-container">
                 <div class="address-item" id="item-0">
                     <div style="flex-grow: 1; position: relative;">
-                        <input type="text" class="addr-input" placeholder="Endereço de Partida" oninput="handleSearch(this)">
+                        <label>Ponto de Partida</label>
+                        <input type="text" class="addr-input" placeholder="Rua, número, cidade..." oninput="handleSearch(this)">
                         <div class="autocomplete-items"></div>
                     </div>
                     <i class="fas fa-trash btn-remove" style="visibility: hidden;"></i>
                 </div>
                 <div class="address-item" id="item-1">
                     <div style="flex-grow: 1; position: relative;">
-                        <input type="text" class="addr-input" placeholder="Destino 1" oninput="handleSearch(this)">
+                        <label>Destino 1</label>
+                        <input type="text" class="addr-input" placeholder="Rua, número, cidade..." oninput="handleSearch(this)">
                         <div class="autocomplete-items"></div>
                     </div>
                     <i class="fas fa-trash btn-remove" onclick="removeAddress(1)"></i>
                 </div>
             </div>
 
-            <button class="btn btn-secondary" onclick="addAddressField()"><i class="fas fa-plus"></i> ADICIONAR PARADA</button>
+            <button class="btn btn-secondary" onclick="addAddressField()"><i class="fas fa-plus-circle"></i> ADICIONAR PARADA</button>
             
             <div class="switch-container">
-                <span>Adicionar Almoço (R$ 25,90)?</span>
+                <div>
+                    <span style="display:block; font-weight: bold;">Incluir Almoço?</span>
+                    <small style="color: #888;">Adicional de R$ 25,90</small>
+                </div>
                 <label class="switch">
                     <input type="checkbox" id="lunch-check">
                     <span class="slider"></span>
                 </label>
             </div>
 
-            <button class="btn btn-primary" onclick="calculateRoute()">ROTEIRIZAR ROTAS</button>
-            <button class="btn btn-secondary" style="border-color: #ff4d4d; color: #ff4d4d;" onclick="clearAll()"><i class="fas fa-sync"></i> LIMPAR ROTA</button>
+            <button class="btn btn-primary" onclick="calculateRoute()" style="font-size: 1rem; height: 60px;">
+                <i class="fas fa-route"></i> ROTEIRIZAR AGORA
+            </button>
+            
+            <button class="btn btn-secondary" style="border-color: #ff4d4d; color: #ff4d4d; margin-top: 20px;" onclick="clearAll()">
+                <i class="fas fa-trash-alt"></i> LIMPAR TUDO
+            </button>
         </div>
 
         <div id="map"></div>
@@ -205,37 +222,47 @@
         const KM_PRICE = 0.85;
         const LUNCH_PRICE = 25.90;
 
-        let map = L.map('map', { zoomControl: false }).setView([-22.79, -43.31], 12);
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(map);
+        let map = L.map('map', { zoomControl: false }).setView([-22.9068, -43.1729], 12);
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+            attribution: '&copy; OpenStreetMap contributors'
+        }).addTo(map);
 
         let markers = [];
         let routeLayer = null;
-        let routeData = []; // Para armazenar coords dos endereços selecionados
+        let lastCalculation = [];
 
-        // Função Autocomplete
+        // --- CORREÇÃO DO AUTOCOMPLETE PARA ENDEREÇO COMPLETO ---
         async function handleSearch(input) {
             const query = input.value;
             const listContainer = input.nextElementSibling;
             listContainer.innerHTML = '';
 
-            if (query.length < 3) return;
+            if (query.length < 4) return;
 
             try {
-                const response = await fetch(`https://api.openrouteservice.org/geocode/autocomplete?api_key=${API_KEY}&text=${query}&boundary.country=BR&size=5`);
+                // Adicionado 'layers=address,venue' para focar em endereços exatos e 'location.bias' para Rio de Janeiro
+                const url = `https://api.openrouteservice.org/geocode/autocomplete?api_key=${API_KEY}&text=${encodeURIComponent(query)}&boundary.country=BR&layers=address,venue,neighbourhood&size=8`;
+                
+                const response = await fetch(url);
                 const data = await response.json();
 
-                data.features.forEach(feature => {
-                    const item = document.createElement('div');
-                    item.innerHTML = feature.properties.label;
-                    item.onclick = () => {
-                        input.value = feature.properties.label;
-                        input.dataset.coords = JSON.stringify(feature.geometry.coordinates);
-                        listContainer.innerHTML = '';
-                        updateMapPreview();
-                    };
-                    listContainer.appendChild(item);
-                });
-            } catch (e) { console.error("Erro no geocoding", e); }
+                if (data.features) {
+                    data.features.forEach(feature => {
+                        const labelCompleto = feature.properties.label; // Label costuma vir completo: Rua, Num, Bairro, Cidade
+                        
+                        const item = document.createElement('div');
+                        item.innerHTML = `<i class="fas fa-map-marker-alt" style="color:var(--neon-blue); margin-right:8px;"></i> ${labelCompleto}`;
+                        
+                        item.onclick = () => {
+                            input.value = labelCompleto;
+                            input.dataset.coords = JSON.stringify(feature.geometry.coordinates);
+                            listContainer.innerHTML = '';
+                            updateMapPreview();
+                        };
+                        listContainer.appendChild(item);
+                    });
+                }
+            } catch (e) { console.error("Erro na busca:", e); }
         }
 
         function addAddressField() {
@@ -246,7 +273,8 @@
             div.id = `item-${id}`;
             div.innerHTML = `
                 <div style="flex-grow: 1; position: relative;">
-                    <input type="text" class="addr-input" placeholder="Nova Parada" oninput="handleSearch(this)">
+                    <label>Parada Adicional</label>
+                    <input type="text" class="addr-input" placeholder="Rua, número, cidade..." oninput="handleSearch(this)">
                     <div class="autocomplete-items"></div>
                 </div>
                 <i class="fas fa-trash btn-remove" onclick="removeAddress('${id}')"></i>
@@ -255,7 +283,8 @@
         }
 
         function removeAddress(id) {
-            document.getElementById(`item-${id}`).remove();
+            const el = document.getElementById(`item-${id}`);
+            if(el) el.remove();
             updateMapPreview();
         }
 
@@ -263,20 +292,20 @@
             markers.forEach(m => map.removeLayer(m));
             markers = [];
             const inputs = document.querySelectorAll('.addr-input');
-            const coordsList = [];
+            const validCoords = [];
 
             inputs.forEach(input => {
                 if (input.dataset.coords) {
-                    const coords = JSON.parse(input.dataset.coords); // [lon, lat]
-                    coordsList.push(coords);
+                    const coords = JSON.parse(input.dataset.coords);
                     const marker = L.marker([coords[1], coords[0]]).addTo(map);
                     markers.push(marker);
+                    validCoords.push(coords);
                 }
             });
 
             if (markers.length > 0) {
                 const group = new L.featureGroup(markers);
-                map.fitBounds(group.getBounds().pad(0.5));
+                map.fitBounds(group.getBounds().pad(0.3));
             }
         }
 
@@ -287,11 +316,11 @@
                                 .map(i => JSON.parse(i.dataset.coords));
 
             if (coords.length < 2) {
-                alert("Insira pelo menos dois endereços válidos.");
+                alert("Por favor, selecione pelo menos a Partida e um Destino através da lista suspensa.");
                 return;
             }
 
-            document.getElementById('loader').style.display = 'block';
+            document.getElementById('loader').style.display = 'flex';
 
             try {
                 const response = await fetch(`https://api.openrouteservice.org/v2/directions/driving-car/geojson`, {
@@ -302,26 +331,22 @@
                 const data = await response.json();
 
                 if (routeLayer) map.removeLayer(routeLayer);
-
                 routeLayer = L.geoJSON(data, {
-                    style: { color: '#00d2ff', weight: 5, opacity: 0.7 }
+                    style: { color: '#00d2ff', weight: 6, opacity: 0.8, dashArray: '10, 10' }
                 }).addTo(map);
 
-                processResults(data, coords, Array.from(inputs).map(i => i.value));
+                processResults(data, Array.from(inputs).map(i => i.value));
 
             } catch (e) {
-                alert("Erro ao calcular rota.");
+                alert("Falha ao traçar rota. Verifique sua conexão ou limite da API.");
             } finally {
                 document.getElementById('loader').style.display = 'none';
             }
         }
 
-        let lastCalculation = [];
-
-        function processResults(geojson, coords, addressNames) {
+        function processResults(geojson, addressNames) {
             const segments = geojson.features[0].properties.segments;
             let totalDist = 0;
-            let totalCost = 0;
             let html = "";
             lastCalculation = [];
 
@@ -329,7 +354,6 @@
                 const distKm = seg.distance / 1000;
                 const cost = distKm * KM_PRICE;
                 totalDist += distKm;
-                totalCost += cost;
 
                 lastCalculation.push({
                     ordem: i + 1,
@@ -338,80 +362,70 @@
                     custo: cost.toFixed(2)
                 });
 
-                html += `<p><strong>${i+1}ª Parada:</strong> ${distKm.toFixed(2)} km - R$ ${cost.toFixed(2)}</p>`;
+                html += `
+                <div style="background: rgba(255,255,255,0.05); padding: 10px; margin-bottom: 8px; border-left: 3px solid var(--neon-blue);">
+                    <small style="color:var(--neon-blue)">VISITA ${i+1}</small><br>
+                    <strong>Para:</strong> ${addressNames[i+1]}<br>
+                    <span>KM: ${distKm.toFixed(2)} | Custo: R$ ${cost.toFixed(2)}</span>
+                </div>`;
             });
 
             const lunchActive = document.getElementById('lunch-check').checked;
-            if (lunchActive) totalCost += LUNCH_PRICE;
+            const finalCost = (totalDist * KM_PRICE) + (lunchActive ? LUNCH_PRICE : 0);
 
             document.getElementById('summary-content').innerHTML = `
                 ${html}
-                <hr style="border-color: #222">
-                <p>Distância Total: ${totalDist.toFixed(2)} km</p>
-                <p>Almoço: ${lunchActive ? 'R$ 25,90' : 'Não'}</p>
-                <h3 style="color: var(--neon-blue)">TOTAL: R$ ${totalCost.toFixed(2)}</h3>
+                <div style="margin-top: 15px; border-top: 1px solid #333; padding-top: 10px;">
+                    <p>Distância Acumulada: <strong>${totalDist.toFixed(2)} km</strong></p>
+                    <p>Almoço: <strong>${lunchActive ? 'R$ 25,90' : 'Não incluso'}</strong></p>
+                    <h2 style="color: var(--neon-blue); margin: 0;">TOTAL: R$ ${finalCost.toFixed(2)}</h2>
+                </div>
             `;
 
-            document.getElementById('pop-tecnico-nome').innerText = "Técnico: " + (document.getElementById('tecnico-nome').value || "Não informado");
+            document.getElementById('pop-tecnico-nome').innerText = "Relatório: " + (document.getElementById('tecnico-nome').value || "Técnico não identificado");
             document.getElementById('overlay').style.display = 'flex';
         }
 
         function downloadExcel() {
-            const tecnico = document.getElementById('tecnico-nome').value || "Não informado";
+            const tecnico = document.getElementById('tecnico-nome').value || "N/A";
             const lunchActive = document.getElementById('lunch-check').checked;
             
-            const data = lastCalculation.map(item => ({
-                "Ordem": item.ordem,
-                "Endereço": item.destino,
-                "KM (ponto a ponto)": item.distancia,
-                "Custo (R$)": item.custo
+            const excelRows = lastCalculation.map(item => ({
+                "Ordem da Visita": item.ordem,
+                "Endereço da Visita": item.destino,
+                "KM desde último ponto": item.distancia,
+                "Custo Calculado (R$)": item.custo
             }));
 
-            const ws = XLSX.utils.json_to_sheet(data);
+            const ws = XLSX.utils.json_to_sheet(excelRows);
             
-            // Adicionando Totais no rodapé
             const totalKm = lastCalculation.reduce((acc, curr) => acc + parseFloat(curr.distancia), 0);
-            const totalCusto = lastCalculation.reduce((acc, curr) => acc + parseFloat(curr.custo), 0) + (lunchActive ? LUNCH_PRICE : 0);
+            const totalCusto = (totalKm * KM_PRICE) + (lunchActive ? LUNCH_PRICE : 0);
 
+            // Rodapé da Planilha
             XLSX.utils.sheet_add_aoa(ws, [
                 [],
-                ["TÉCNICO:", tecnico],
-                ["ALMOÇO:", lunchActive ? "R$ 25,90" : "R$ 0,00"],
-                ["DISTÂNCIA TOTAL:", totalKm.toFixed(2) + " KM"],
-                ["CUSTO TOTAL DO DIA:", "R$ " + totalCusto.toFixed(2)]
+                ["TÉCNICO RESPONSÁVEL:", tecnico],
+                ["ALMOÇO INCLUSO:", lunchActive ? "SIM (R$ 25,90)" : "NÃO"],
+                ["KM TOTAL:", totalKm.toFixed(2)],
+                ["VALOR TOTAL DO DIA:", "R$ " + totalCusto.toFixed(2)]
             ], { origin: -1 });
 
             const wb = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(wb, ws, "Rota Fluxomed");
-            XLSX.writeFile(wb, `Rota_${tecnico}.xlsx`);
+            XLSX.writeFile(wb, `Rota_Fluxomed_${tecnico.replace(/ /g, '_')}.xlsx`);
         }
 
         function closePopup() { document.getElementById('overlay').style.display = 'none'; }
 
         function clearAll() {
-            location.reload();
+            if(confirm("Deseja realmente limpar toda a rota?")) {
+                location.reload();
+            }
         }
     </script>
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
