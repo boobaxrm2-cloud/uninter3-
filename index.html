@@ -1,84 +1,160 @@
 <!DOCTYPE html>
 <html lang="pt-br">
+
 <head>
+
 <meta charset="UTF-8">
-<title>Roteirizador de Visitas</title>
+<title>Roteirizador Inteligente</title>
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
 
 <style>
 
 body{
 margin:0;
 font-family:Arial;
-background:#000;
+background:#111;
 color:white;
-}
-
-.container{
-display:flex;
-height:100vh;
 }
 
 #map{
-flex:2;
+height:100vh;
 }
 
 .painel{
-flex:1;
-background:#111;
+
+position:absolute;
+top:20px;
+left:20px;
+width:360px;
+
+background:#1c1c1c;
 padding:20px;
-overflow:auto;
-}
+border-radius:10px;
 
-input{
-width:70%;
-padding:8px;
-margin:5px 0;
-}
+z-index:1000;
 
-button{
-padding:8px;
-margin:5px;
-cursor:pointer;
-}
-
-.endereco{
-display:flex;
-align-items:center;
-gap:5px;
-}
-
-.lixeira{
-background:red;
-color:white;
-border:none;
-}
-
-#loading{
-display:none;
-font-size:18px;
 }
 
 .resultado{
-margin-top:20px;
-background:#222;
-padding:10px;
-}
 
-.autocomplete{
-background:#222;
 position:absolute;
-z-index:999;
+top:20px;
+right:20px;
+
+background:#1c1c1c;
+padding:20px;
+border-radius:10px;
+width:300px;
+max-height:85vh;
+overflow:auto;
+
 }
 
-.autocomplete div{
-padding:5px;
+input{
+width:100%;
+padding:10px;
+border:none;
+border-radius:6px;
+margin-top:5px;
+}
+
+button{
+
+margin-top:8px;
+padding:10px;
+border:none;
+border-radius:6px;
+cursor:pointer;
+width:100%;
+
+}
+
+.add{background:#2ecc71;color:white}
+.rota{background:#3498db;color:white}
+.popup{background:#9b59b6;color:white}
+.excel{background:#f39c12;color:white}
+
+.listaItem{
+
+background:#2a2a2a;
+padding:6px;
+margin-top:6px;
+border-radius:6px;
+font-size:13px;
+display:flex;
+justify-content:space-between;
+align-items:center;
+
+}
+
+.lixeira{
+
+background:#e74c3c;
+color:white;
+border:none;
+border-radius:4px;
+padding:3px 6px;
+cursor:pointer;
+
+}
+
+.sugestoes{
+
+background:white;
+color:black;
+max-height:150px;
+overflow:auto;
+border-radius:6px;
+
+}
+
+.itemSugestao{
+padding:8px;
 cursor:pointer;
 }
 
-.autocomplete div:hover{
-background:#444;
+.itemSugestao:hover{
+background:#eee;
+}
+
+.loading{
+
+display:none;
+margin-top:10px;
+text-align:center;
+
+}
+
+.spinner{
+
+border:4px solid #444;
+border-top:4px solid #2ecc71;
+border-radius:50%;
+width:30px;
+height:30px;
+animation:girar 1s linear infinite;
+margin:auto;
+
+}
+
+@keyframes girar{
+0%{transform:rotate(0)}
+100%{transform:rotate(360deg)}
+}
+
+.segmento{
+margin-top:6px;
+font-size:13px;
+}
+
+.total{
+margin-top:10px;
+font-weight:bold;
+color:#2ecc71;
 }
 
 </style>
@@ -87,218 +163,344 @@ background:#444;
 
 <body>
 
-<div class="container">
+<div class="painel">
+
+<h3>Adicionar endereço</h3>
+
+<input id="endereco" placeholder="Digite o endereço">
+
+<div id="sugestoes" class="sugestoes"></div>
+
+<button class="add" onclick="adicionarEndereco()">Adicionar endereço</button>
+
+<button class="rota" onclick="gerarRota()">Gerar rota otimizada</button>
+
+<button class="popup" onclick="mostrarPopup()">Visualizar rota</button>
+
+<button class="excel" onclick="baixarExcel()">Baixar Excel</button>
+
+<div class="loading" id="loading">
+
+<div class="spinner"></div>
+Calculando rota...
+
+</div>
+
+<div id="lista"></div>
+
+</div>
+
+<div class="resultado">
+
+<h3>Resumo da rota</h3>
+
+<div id="detalhes"></div>
+
+<div class="total" id="total"></div>
+
+</div>
 
 <div id="map"></div>
 
-<div class="painel">
-
-<h2>Roteirizador</h2>
-
-<div id="enderecos"></div>
-
-<button onclick="addEndereco()">Adicionar outra rota</button>
-
-<br><br>
-
-<button onclick="gerarRota()">Gerar Rota</button>
-
-<div id="loading">Calculando rota...</div>
-
-<div class="resultado" id="resultado"></div>
-
-</div>
-
-</div>
-
-<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-
 <script>
 
-const apiKey = "eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6IjBkNDRmZDJkNmQzMTRkZWQ4YWYyZGIzODY1NzViNjA5IiwiaCI6Im11cm11cjY0In0=";
+const API_KEY="eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6IjBkNDRmZDJkNmQzMTRkZWQ4YWYyZGIzODY1NzViNjA5IiwiaCI6Im11cm11cjY0In0="
 
-let map = L.map('map').setView([-22.90,-43.20],11);
+var map=L.map('map').setView([-22.9,-43.2],12)
 
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
-maxZoom:19
-}).addTo(map);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19}).addTo(map)
 
-let marcadores = [];
-let coords = [];
-let rotaLayer;
-let labels = [];
+let pontos=[]
+let marcadores=[]
+let enderecos=[]
+let rota=null
+let enderecoSelecionado=null
+let dadosRota=[]
 
-function addEndereco(){
+const input=document.getElementById("endereco")
+const sugestoes=document.getElementById("sugestoes")
 
-let div = document.createElement("div");
-div.className="endereco";
+input.addEventListener("input",function(){
 
-div.innerHTML = `
-<input type="text" placeholder="Digite o endereço" oninput="buscarEndereco(this)">
-<button class="lixeira" onclick="removerEndereco(this)">🗑</button>
-<div class="autocomplete"></div>
-`;
+let valor=this.value
 
-document.getElementById("enderecos").appendChild(div);
+if(valor.length<3){
+sugestoes.innerHTML=""
+return
+}
+
+fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${valor}`)
+
+.then(r=>r.json())
+
+.then(data=>{
+
+sugestoes.innerHTML=""
+
+data.slice(0,5).forEach(local=>{
+
+let div=document.createElement("div")
+
+div.className="itemSugestao"
+
+div.innerText=local.display_name
+
+div.onclick=function(){
+
+enderecoSelecionado=local
+input.value=local.display_name
+sugestoes.innerHTML=""
 
 }
 
-function removerEndereco(btn){
+sugestoes.appendChild(div)
 
-let div = btn.parentNode;
-div.remove();
-
-}
-
-async function buscarEndereco(input){
-
-let query = input.value;
-
-if(query.length < 3) return;
-
-let url = `https://api.openrouteservice.org/geocode/autocomplete?api_key=${apiKey}&text=${query}`;
-
-let res = await fetch(url);
-let data = await res.json();
-
-let lista = input.parentNode.querySelector(".autocomplete");
-
-lista.innerHTML="";
-
-data.features.forEach(lugar=>{
-
-let item = document.createElement("div");
-
-item.innerText = lugar.properties.label;
-
-item.onclick = ()=>{
-
-input.value = lugar.properties.label;
-
-let lon = lugar.geometry.coordinates[0];
-let lat = lugar.geometry.coordinates[1];
-
-adicionarMarcador(lat,lon);
-
-lista.innerHTML="";
-
-};
-
-lista.appendChild(item);
-
-});
-
-}
-
-function adicionarMarcador(lat,lon){
-
-let marker = L.marker([lat,lon],{draggable:true}).addTo(map);
-
-marker.on("dragend", atualizarCoords);
-
-marcadores.push(marker);
-
-coords.push([lon,lat]);
-
-}
-
-function atualizarCoords(){
-
-coords=[];
-
-marcadores.forEach(m=>{
-
-let latlng = m.getLatLng();
-
-coords.push([latlng.lng,latlng.lat]);
-
-});
-
-}
-
-async function gerarRota(){
-
-if(coords.length < 2){
-alert("Adicione ao menos 2 endereços");
-return;
-}
-
-document.getElementById("loading").style.display="block";
-
-let body = {
-coordinates: coords
-};
-
-let res = await fetch(
-"https://api.openrouteservice.org/v2/directions/driving-car/geojson",
-{
-method:"POST",
-headers:{
-"Authorization":apiKey,
-"Content-Type":"application/json"
-},
-body: JSON.stringify(body)
-});
-
-let data = await res.json();
-
-document.getElementById("loading").style.display="none";
-
-if(rotaLayer) map.removeLayer(rotaLayer);
-labels.forEach(l=>map.removeLayer(l));
-labels=[];
-
-rotaLayer = L.geoJSON(data).addTo(map);
-
-let coordsRota = data.features[0].geometry.coordinates;
-
-let totalDist = data.features[0].properties.summary.distance/1000;
-
-let texto="";
-
-for(let i=0;i<coordsRota.length-1;i+=20){
-
-let p1 = coordsRota[i];
-let p2 = coordsRota[i+20];
-
-if(!p2) continue;
-
-let dist = map.distance(
-[p1[1],p1[0]],
-[p2[1],p2[0]]
-)/1000;
-
-let meio = [
-(p1[1]+p2[1])/2,
-(p1[0]+p2[0])/2
-];
-
-let label = L.marker(meio,{
-icon:L.divIcon({
-className:"",
-html:`<div style="background:#000;padding:4px;border-radius:5px;color:#0f0">${dist.toFixed(2)} km</div>`
 })
-}).addTo(map);
 
-labels.push(label);
+})
+
+})
+
+function adicionarEndereco(){
+
+if(!enderecoSelecionado){
+alert("Selecione um endereço da lista")
+return
+}
+
+let lat=parseFloat(enderecoSelecionado.lat)
+let lon=parseFloat(enderecoSelecionado.lon)
+
+let marker=L.marker([lat,lon],{draggable:true}).addTo(map)
+
+marker.bindPopup(enderecoSelecionado.display_name)
+
+marker.on("dragend",function(){
+
+let pos=marker.getLatLng()
+pontos[marcadores.indexOf(marker)]=[pos.lng,pos.lat]
+
+})
+
+marcadores.push(marker)
+pontos.push([lon,lat])
+enderecos.push(enderecoSelecionado.display_name)
+
+atualizarLista()
+
+map.setView([lat,lon],14)
+
+input.value=""
+enderecoSelecionado=null
 
 }
 
-let valor = totalDist * 0.85;
+function atualizarLista(){
 
-texto += `<b>Total KM:</b> ${totalDist.toFixed(2)} km<br>`;
-texto += `<b>Valor estimado:</b> R$ ${valor.toFixed(2)}`;
+let lista=document.getElementById("lista")
 
-document.getElementById("resultado").innerHTML = texto;
+lista.innerHTML=""
+
+enderecos.forEach((end,i)=>{
+
+let div=document.createElement("div")
+
+div.className="listaItem"
+
+div.innerHTML=end+
+` <button class="lixeira" onclick="remover(${i})">🗑</button>`
+
+lista.appendChild(div)
+
+})
 
 }
 
-addEndereco();
+function remover(i){
+
+map.removeLayer(marcadores[i])
+
+marcadores.splice(i,1)
+pontos.splice(i,1)
+enderecos.splice(i,1)
+
+atualizarLista()
+
+}
+
+function gerarRota(){
+
+if(pontos.length<2){
+alert("Adicione pelo menos 2 endereços")
+return
+}
+
+document.getElementById("loading").style.display="block"
+
+if(rota){
+map.removeLayer(rota)
+}
+
+fetch("https://api.openrouteservice.org/v2/directions/driving-car/geojson",{
+
+method:"POST",
+
+headers:{
+"Content-Type":"application/json",
+"Authorization":API_KEY
+},
+
+body:JSON.stringify({
+coordinates:pontos,
+optimize_waypoints:true
+})
+
+})
+
+.then(r=>r.json())
+
+.then(data=>{
+
+document.getElementById("loading").style.display="none"
+
+let coords=data.features[0].geometry.coordinates
+
+let latlngs=coords.map(c=>[c[1],c[0]])
+
+rota=L.polyline(latlngs,{
+color:"cyan",
+weight:5
+}).addTo(map)
+
+map.fitBounds(rota.getBounds())
+
+calcularDistancias(data)
+
+})
+
+}
+
+function calcularDistancias(data){
+
+dadosRota=[]
+
+let segmentos=data.features[0].properties.segments
+
+let totalKm=0
+
+let detalhes=document.getElementById("detalhes")
+
+detalhes.innerHTML=""
+
+segmentos.forEach((seg,i)=>{
+
+let km=seg.distance/1000
+let valor=km*0.85
+
+totalKm+=km
+
+dadosRota.push({
+
+ordem:i+1,
+endereco:enderecos[i],
+km:km,
+valor:valor
+
+})
+
+let div=document.createElement("div")
+
+div.className="segmento"
+
+div.innerHTML=`Visita ${i+1} → ${km.toFixed(2)} km | R$ ${valor.toFixed(2)}`
+
+detalhes.appendChild(div)
+
+})
+
+let totalValor=totalKm*0.85
+
+document.getElementById("total").innerHTML=
+
+`Distância total: ${totalKm.toFixed(2)} km<br>
+Custo total: R$ ${totalValor.toFixed(2)}`
+
+}
+
+function mostrarPopup(){
+
+if(dadosRota.length==0){
+alert("Calcule a rota primeiro")
+return
+}
+
+let texto="ROTA OTIMIZADA\n\n"
+
+dadosRota.forEach(d=>{
+
+texto+=`Visita ${d.ordem}
+${d.endereco}
+Distância: ${d.km.toFixed(2)} km
+Valor: R$ ${d.valor.toFixed(2)}
+
+`
+
+})
+
+let popup=window.open("","rota","width=400,height=500")
+
+popup.document.write(`<pre>${texto}</pre>`)
+
+}
+
+function baixarExcel(){
+
+if(dadosRota.length==0){
+alert("Calcule a rota primeiro")
+return
+}
+
+let total=0
+
+let planilha=dadosRota.map(d=>{
+
+total+=d.valor
+
+return{
+
+"Ordem da visita":d.ordem,
+"Endereço da visita":d.endereco,
+"Distância do último ponto (km)":d.km.toFixed(2),
+"Valor do trecho (R$)":d.valor.toFixed(2)
+
+}
+
+})
+
+planilha.push({
+
+"Ordem da visita":"",
+"Endereço da visita":"TOTAL",
+"Distância do último ponto (km)":"",
+"Valor do trecho (R$)":total.toFixed(2)
+
+})
+
+let ws=XLSX.utils.json_to_sheet(planilha)
+
+let wb=XLSX.utils.book_new()
+
+XLSX.utils.book_append_sheet(wb,ws,"Rota")
+
+XLSX.writeFile(wb,"rota_visitas.xlsx")
+
+}
 
 </script>
 
 </body>
 </html>
+
 
 
 
