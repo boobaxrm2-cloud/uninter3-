@@ -71,12 +71,27 @@ font-weight:bold;
 .delete{background:#ef4444;color:white;}
 .clear{background:#f59e0b;color:white;}
 
-.address{
-margin-top:8px;
+.autocomplete{
+position:relative;
 }
 
-.switch{
-margin-top:10px;
+.suggestions{
+position:absolute;
+background:#1f2937;
+width:100%;
+max-height:150px;
+overflow:auto;
+border-radius:5px;
+z-index:2000;
+}
+
+.suggestions div{
+padding:8px;
+cursor:pointer;
+}
+
+.suggestions div:hover{
+background:#374151;
 }
 
 .loading{
@@ -134,12 +149,10 @@ width:350px;
 <div id="addresses"></div>
 
 <button class="add" onclick="addAddress()">Adicionar endereço</button>
-
 <button class="delete" onclick="removeAddress()">Excluir último endereço</button>
-
 <button class="clear" onclick="clearRoutes()">Limpar rotas</button>
 
-<div class="switch">
+<div style="margin-top:10px">
 <input type="checkbox" id="almoco"> Incluir almoço (R$25,90)
 </div>
 
@@ -173,21 +186,46 @@ let rotaLayer=null
 
 function addAddress(){
 
+let container=document.createElement("div")
+container.className="autocomplete"
+
 let input=document.createElement("input")
 input.placeholder="Digite endereço"
 
-input.addEventListener("change",async ()=>{
+let suggestions=document.createElement("div")
+suggestions.className="suggestions"
 
-let res=await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${input.value}`)
+container.appendChild(input)
+container.appendChild(suggestions)
+
+document.getElementById("addresses").appendChild(container)
+
+input.addEventListener("input",async ()=>{
+
+let q=input.value
+
+if(q.length<3) return
+
+let res=await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${q}`)
 let data=await res.json()
 
-if(data.length>0){
+suggestions.innerHTML=""
 
-let lat=data[0].lat
-let lon=data[0].lon
+data.slice(0,5).forEach(place=>{
+
+let item=document.createElement("div")
+item.innerText=place.display_name
+
+item.onclick=()=>{
+
+input.value=place.display_name
+suggestions.innerHTML=""
+
+let lat=place.lat
+let lon=place.lon
 
 coords.push([lon,lat])
-addresses.push(input.value)
+addresses.push(place.display_name)
 
 let marker=L.marker([lat,lon]).addTo(map)
 
@@ -197,18 +235,19 @@ map.setView([lat,lon],13)
 
 }
 
+suggestions.appendChild(item)
+
 })
 
-document.getElementById("addresses").appendChild(input)
+})
 
 }
 
 function removeAddress(){
 
-if(markers.length==0)return
+if(markers.length==0) return
 
-let marker=markers.pop()
-map.removeLayer(marker)
+map.removeLayer(markers.pop())
 
 coords.pop()
 addresses.pop()
@@ -226,9 +265,7 @@ markers=[]
 coords=[]
 addresses=[]
 
-if(rotaLayer){
-map.removeLayer(rotaLayer)
-}
+if(rotaLayer) map.removeLayer(rotaLayer)
 
 document.getElementById("addresses").innerHTML=""
 
@@ -266,12 +303,10 @@ if(almoco) valor+=25.90
 
 let html=`
 <h2>Resumo da rota</h2>
-<p><b>Kilometragem:</b> ${km.toFixed(2)} km</p>
-<p><b>Valor KM:</b> R$0,85</p>
-<p><b>Total:</b> R$${valor.toFixed(2)}</p>
+<p>Kilometragem: ${km.toFixed(2)} km</p>
+<p>Total: R$${valor.toFixed(2)}</p>
 
 <button onclick="baixarPDF(${km},${valor})">Baixar PDF</button>
-
 <button onclick="fechar()">Fechar</button>
 `
 
@@ -282,9 +317,7 @@ let geo=data.routes[0].geometry
 
 if(rotaLayer) map.removeLayer(rotaLayer)
 
-rotaLayer=L.geoJSON(geo,{
-style:{color:"#22c55e",weight:5}
-}).addTo(map)
+rotaLayer=L.geoJSON(geo,{style:{color:"#22c55e",weight:5}}).addTo(map)
 
 }
 
@@ -304,24 +337,18 @@ let pdf=new jsPDF()
 
 let tecnico=document.getElementById("tecnico").value
 
-pdf.text("ROTEIRIZADOR DE VISITAS FLUXOMED",10,10)
-
+pdf.text("ROTEIRIZADOR FLUXOMED",10,10)
 pdf.text("Técnico: "+tecnico,10,20)
 
-pdf.text("Endereços:",10,30)
-
-let y=40
+let y=30
 
 addresses.forEach((a,i)=>{
-
 pdf.text((i+1)+" - "+a,10,y)
 y+=8
-
 })
 
-pdf.text("Distância total: "+km.toFixed(2)+" km",10,y+10)
-
-pdf.text("Valor total: R$"+total.toFixed(2),10,y+18)
+pdf.text("Distância: "+km.toFixed(2)+" km",10,y+10)
+pdf.text("Total: R$"+total.toFixed(2),10,y+18)
 
 pdf.addImage(img,"PNG",10,y+25,180,90)
 
@@ -338,6 +365,8 @@ addAddress()
 
 </body>
 </html>
+
+
 
 
 
