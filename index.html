@@ -1,355 +1,347 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-br">
 <head>
-<meta charset="UTF-8">
-<title>ROTEIRIZADOR DE VISITAS FLUXOMED</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fluxomed | Roteirizador de Visitas</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --uber-black: #000000;
+            --uber-dark-grey: #1f1f1f;
+            --uber-blue: #276ef1;
+            --uber-blue-hover: #1e56be;
+            --text-white: #ffffff;
+            --text-grey: #afafaf;
+        }
 
-<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
-<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
 
-<style>
+        body {
+            background-color: var(--uber-black);
+            color: var(--text-white);
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
+            padding: 40px 20px;
+        }
 
-body{
-margin:0;
-font-family:Arial;
-background:#0b0f1a;
-color:white;
-}
+        .container {
+            width: 100%;
+            max-width: 600px;
+            background: var(--uber-dark-grey);
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            animation: fadeIn 0.8s ease;
+        }
 
-header{
-background:#05070d;
-padding:18px;
-font-size:22px;
-font-weight:bold;
-color:#4da3ff;
-letter-spacing:1px;
-text-align:center;
-border-bottom:1px solid #1b2a4a;
-}
+        h1 {
+            font-size: 1.5rem;
+            margin-bottom: 25px;
+            color: var(--uber-blue);
+            text-align: center;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
 
-.container{
-display:flex;
-height:calc(100vh - 60px);
-}
+        .input-group {
+            position: relative;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            animation: slideIn 0.3s ease;
+        }
 
-.panel{
-width:420px;
-background:#0e1424;
-padding:20px;
-overflow:auto;
-border-right:1px solid #1b2a4a;
-}
+        .input-group input {
+            width: 100%;
+            padding: 15px;
+            background: #2b2b2b;
+            border: 1px solid #3d3d3d;
+            border-radius: 8px;
+            color: white;
+            outline: none;
+            transition: 0.3s;
+        }
 
-#map{
-flex:1;
-}
+        .input-group input:focus { border-color: var(--uber-blue); }
 
-.input-group{
-margin-bottom:12px;
-position:relative;
-}
+        .remove-btn {
+            background: transparent;
+            border: none;
+            color: #ff4d4d;
+            margin-left: 10px;
+            cursor: pointer;
+            font-size: 1.2rem;
+        }
 
-input{
-width:100%;
-padding:12px;
-border:none;
-border-radius:6px;
-background:#111a33;
-color:white;
-}
+        .autocomplete-list {
+            position: absolute;
+            top: 55px;
+            left: 0;
+            width: 100%;
+            background: #333;
+            z-index: 1000;
+            border-radius: 8px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
 
-button{
-margin-top:10px;
-width:100%;
-padding:12px;
-border:none;
-border-radius:6px;
-background:#2d7cff;
-color:white;
-font-weight:bold;
-cursor:pointer;
-transition:.2s;
-}
+        .autocomplete-item {
+            padding: 12px;
+            cursor: pointer;
+            border-bottom: 1px solid #444;
+        }
 
-button:hover{
-background:#5597ff;
-transform:scale(1.02);
-}
+        .autocomplete-item:hover { background: #444; }
 
-.removeBtn{
-position:absolute;
-right:5px;
-top:5px;
-background:#ff3b3b;
-border:none;
-padding:5px 8px;
-cursor:pointer;
-}
+        .buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 20px;
+        }
 
-.autocomplete{
-background:#0e1424;
-border:1px solid #1b2a4a;
-position:absolute;
-width:100%;
-z-index:999;
-max-height:150px;
-overflow:auto;
-}
+        button {
+            padding: 15px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: 0.3s;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+        }
 
-.autocomplete div{
-padding:8px;
-cursor:pointer;
-}
+        .btn-add { background: #333; color: white; }
+        .btn-route { background: var(--uber-blue); color: white; }
+        .btn-route:hover { background: var(--uber-blue-hover); }
+        .btn-clear { background: #444; color: #ff4d4d; }
+        .btn-excel { background: #1d6f42; color: white; margin-top: 10px; display: none; }
 
-.autocomplete div:hover{
-background:#1b2a4a;
-}
+        /* Modal / Popup */
+        #modal {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: var(--uber-dark-grey);
+            padding: 30px;
+            border-radius: 12px;
+            border: 2px solid var(--uber-blue);
+            z-index: 2000;
+            width: 90%;
+            max-width: 400px;
+            text-align: center;
+        }
 
-.loader{
-display:none;
-margin:20px auto;
-border:5px solid #1b2a4a;
-border-top:5px solid #4da3ff;
-border-radius:50%;
-width:40px;
-height:40px;
-animation:spin 1s linear infinite;
-}
+        .overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8);
+            z-index: 1999;
+        }
 
-@keyframes spin{
-0%{transform:rotate(0deg)}
-100%{transform:rotate(360deg)}
-}
+        #loader {
+            display: none;
+            margin: 20px auto;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid var(--uber-blue);
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+        }
 
-.popup{
-position:fixed;
-top:50%;
-left:50%;
-transform:translate(-50%,-50%);
-background:#0e1424;
-padding:30px;
-border-radius:10px;
-display:none;
-border:1px solid #1b2a4a;
-}
-
-</style>
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes slideIn { from { transform: translateY(10px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    </style>
 </head>
-
 <body>
 
-<header>ROTEIRIZADOR DE VISITAS FLUXOMED</header>
-
 <div class="container">
+    <h1>Fluxomed Roteirizador</h1>
+    
+    <div id="address-container">
+        <div class="input-group">
+            <input type="text" placeholder="Ponto de Partida (Endereço, Nº, CEP)" class="address-input">
+            <div class="autocomplete-list"></div>
+        </div>
+        <div class="input-group">
+            <input type="text" placeholder="Destino 1" class="address-input">
+            <div class="autocomplete-list"></div>
+        </div>
+    </div>
 
-<div class="panel">
-
-<div id="inputs"></div>
-
-<button onclick="addInput()">+ Adicionar endereço</button>
-<button onclick="roteirizar()">Roteirizar Rotas</button>
-<button onclick="limpar()">Limpar rota</button>
-<button onclick="exportExcel()">Gerar Planilha Excel</button>
-
-<div class="loader" id="loader"></div>
-
+    <div class="buttons">
+        <button class="btn-add" onclick="addInput()"><i class="fas fa-plus"></i> Adicionar Parada</button>
+        <button class="btn-route" onclick="calculateRoute()">Roteirizar Rota</button>
+        <button class="btn-clear" onclick="clearAll()"><i class="fas fa-trash"></i> Limpar Rota</button>
+        <div id="loader"></div>
+        <button id="btn-excel" class="btn-excel" onclick="generateExcel()"><i class="fas fa-file-excel"></i> Baixar Planilha</button>
+    </div>
 </div>
 
-<div id="map"></div>
-
+<div class="overlay" id="overlay"></div>
+<div id="modal">
+    <h3>Resumo da Rota</h3>
+    <div id="result-content" style="margin: 20px 0; text-align: left; font-size: 0.9rem;"></div>
+    <button class="btn-route" onclick="closeModal()">Fechar</button>
 </div>
-
-<div class="popup" id="popup"></div>
 
 <script>
-
-const API_KEY="eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6IjBkNDRmZDJkNmQzMTRkZWQ4YWYyZGIzODY1NzViNjA5IiwiaCI6Im11cm11cjY0In0=";
-
-let map=L.map('map').setView([-22.9,-43.2],11);
-
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
-attribution:'OSM'
-}).addTo(map);
-
-let markers=[]
-let routeLine
-let rotaDados=[]
-
-addInput()
-addInput()
-
-function addInput(){
-
-let div=document.createElement("div")
-div.className="input-group"
-
-let input=document.createElement("input")
-input.placeholder="Digite endereço"
-
-let auto=document.createElement("div")
-auto.className="autocomplete"
-
-input.oninput=async function(){
-
-let q=input.value
-if(q.length<4) return
-
-let url=`https://api.openrouteservice.org/geocode/search?api_key=${API_KEY}&text=${q}`
-
-let res=await fetch(url)
-let data=await res.json()
-
-auto.innerHTML=""
-
-data.features.slice(0,5).forEach(f=>{
-
-let opt=document.createElement("div")
-opt.innerText=f.properties.label
-
-opt.onclick=function(){
-input.value=f.properties.label
-input.dataset.lng=f.geometry.coordinates[0]
-input.dataset.lat=f.geometry.coordinates[1]
-auto.innerHTML=""
-}
-
-auto.appendChild(opt)
-
-})
-
-}
-
-let remove=document.createElement("button")
-remove.innerText="X"
-remove.className="removeBtn"
-remove.onclick=function(){div.remove()}
-
-div.appendChild(input)
-div.appendChild(remove)
-div.appendChild(auto)
-
-document.getElementById("inputs").appendChild(div)
-
-}
-
-async function roteirizar(){
-
-document.getElementById("loader").style.display="block"
-
-let inputs=document.querySelectorAll("#inputs input")
-
-let coords=[]
-
-inputs.forEach(i=>{
-if(i.dataset.lat){
-coords.push([parseFloat(i.dataset.lng),parseFloat(i.dataset.lat)])
-}
-})
-
-if(coords.length<2){
-alert("Insira pelo menos dois endereços")
-return
-}
-
-let body={
-coordinates:coords,
-instructions:false
-}
-
-let res=await fetch(
-"https://api.openrouteservice.org/v2/directions/driving-car/geojson",
-{
-method:"POST",
-headers:{
-"Authorization":API_KEY,
-"Content-Type":"application/json"
-},
-body:JSON.stringify(body)
-})
-
-let data=await res.json()
-
-let route=data.features[0].geometry.coordinates
-
-if(routeLine) map.removeLayer(routeLine)
-
-routeLine=L.polyline(route.map(c=>[c[1],c[0]]),{color:"#4da3ff",weight:5}).addTo(map)
-
-map.fitBounds(routeLine.getBounds())
-
-let totalKm=data.features[0].properties.summary.distance/1000
-let custoTotal=totalKm*0.85
-
-rotaDados=[]
-let html=""
-
-let legs=data.features[0].properties.segments[0].steps
-
-let acumulado=0
-
-inputs.forEach((i,index)=>{
-
-let dist=0
-
-if(index>0){
-
-dist=(data.features[0].properties.segments[0].distance/1000)/inputs.length
-
-}
-
-let custo=dist*0.85
-acumulado+=custo
-
-rotaDados.push({
-ordem:index+1,
-endereco:i.value,
-km:dist.toFixed(2),
-valor:custo.toFixed(2),
-total:acumulado.toFixed(2)
-})
-
-html+=`<p><b>Visita ${index+1}</b><br>${i.value}<br>${dist.toFixed(2)} km | R$ ${custo.toFixed(2)}</p>`
-
-})
-
-html+=`<hr><b>Total:</b> ${totalKm.toFixed(2)} km<br><b>Custo:</b> R$ ${custoTotal.toFixed(2)}`
-
-document.getElementById("popup").innerHTML=html
-document.getElementById("popup").style.display="block"
-
-document.getElementById("loader").style.display="none"
-
-}
-
-function limpar(){
-
-location.reload()
-
-}
-
-function exportExcel(){
-
-let ws=XLSX.utils.json_to_sheet(rotaDados)
-
-let wb=XLSX.utils.book_new()
-
-XLSX.utils.book_append_sheet(wb,ws,"Rota")
-
-XLSX.writeFile(wb,"rota_fluxomed.xlsx")
-
-}
-
+    const API_KEY = 'eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6IjBkNDRmZDJkNmQzMTRkZWQ4YWYyZGIzODY1NzViNjA5IiwiaCI6Im11cm11cjY0In0=';
+    let routeData = [];
+
+    function addInput() {
+        const div = document.createElement('div');
+        div.className = 'input-group';
+        div.innerHTML = `
+            <input type="text" placeholder="Próxima Parada" class="address-input">
+            <div class="autocomplete-list"></div>
+            <button class="remove-btn" onclick="this.parentElement.remove()"><i class="fas fa-times"></i></button>
+        `;
+        document.getElementById('address-container').appendChild(div);
+        initAutocomplete(div.querySelector('input'));
+    }
+
+    function initAutocomplete(input) {
+        const list = input.nextElementSibling;
+        input.addEventListener('input', async () => {
+            const query = input.value;
+            if (query.length < 3) { list.innerHTML = ''; return; }
+
+            try {
+                const response = await fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(query)}&limit=5`);
+                const data = await response.json();
+                list.innerHTML = '';
+                data.features.forEach(feature => {
+                    const item = document.createElement('div');
+                    item.className = 'autocomplete-item';
+                    const name = feature.properties.name || '';
+                    const street = feature.properties.street || '';
+                    const city = feature.properties.city || '';
+                    const postcode = feature.properties.postcode || '';
+                    const fullAddress = `${street} ${name}, ${city} - CEP: ${postcode}`;
+                    
+                    item.innerText = fullAddress;
+                    item.onclick = () => {
+                        input.value = fullAddress;
+                        input.dataset.lat = feature.geometry.coordinates[1];
+                        input.dataset.lng = feature.geometry.coordinates[0];
+                        list.innerHTML = '';
+                    };
+                    list.appendChild(item);
+                });
+            } catch (e) { console.error("Erro no autocomplete"); }
+        });
+    }
+
+    async function calculateRoute() {
+        const inputs = Array.from(document.querySelectorAll('.address-input'));
+        const coords = inputs.map(i => i.dataset.lng && i.dataset.lat ? [parseFloat(i.dataset.lng), parseFloat(i.dataset.lat)] : null).filter(c => c);
+
+        if (coords.length < 2) {
+            alert("Selecione pelo menos 2 endereços válidos da lista!");
+            return;
+        }
+
+        document.getElementById('loader').style.display = 'block';
+        
+        try {
+            const body = { coordinates: coords };
+            const response = await fetch('https://api.openrouteservice.org/v2/directions/driving-car/geojson', {
+                method: 'POST',
+                headers: { 'Authorization': API_KEY, 'Content-Type': 'application/json' },
+                body: JSON.stringify(body)
+            });
+            const data = await response.json();
+            
+            // Lógica de cálculo de distâncias entre pontos
+            const segments = data.features[0].properties.segments;
+            let totalKm = 0;
+            let htmlResult = '';
+            routeData = [];
+
+            inputs.forEach((input, index) => {
+                let kmLink = 0;
+                let costLink = 0;
+                if (index > 0) {
+                    kmLink = segments[index - 1].distance / 1000;
+                    costLink = kmLink * 0.85;
+                    totalKm += kmLink;
+                }
+
+                routeData.push({
+                    ordem: index + 1,
+                    endereco: input.value,
+                    kmDesdeUltimo: kmLink.toFixed(2),
+                    valorDesdeUltimo: costLink.toFixed(2)
+                });
+
+                htmlResult += `<p><strong>${index + 1}º:</strong> ${input.value.substring(0,30)}... <br> 
+                               <span style="color:var(--uber-blue)">+ ${kmLink.toFixed(2)} km (R$ ${costLink.toFixed(2)})</span></p><hr style="border:0.5px solid #444; margin:5px 0">`;
+            });
+
+            const totalCost = totalKm * 0.85;
+            htmlResult += `<br><h4>TOTAL: ${totalKm.toFixed(2)} KM</h4>`;
+            htmlResult += `<h4>VALOR TOTAL: R$ ${totalCost.toFixed(2)}</h4>`;
+
+            document.getElementById('result-content').innerHTML = htmlResult;
+            document.getElementById('overlay').style.display = 'block';
+            document.getElementById('modal').style.display = 'block';
+            document.getElementById('btn-excel').style.display = 'flex';
+
+        } catch (error) {
+            alert("Erro ao calcular rota. Verifique a chave API ou conexões.");
+        } finally {
+            document.getElementById('loader').style.display = 'none';
+        }
+    }
+
+    function generateExcel() {
+        let totalAcumulado = 0;
+        const dataForSheet = routeData.map(item => {
+            totalAcumulado += parseFloat(item.valorDesdeUltimo);
+            return {
+                "Ordem da Visita": item.ordem,
+                "Endereço": item.endereco,
+                "Km desde última": item.kmDesdeUltimo + " km",
+                "Valor Trecho (R$)": item.valorDesdeUltimo,
+                "Valor Total Acumulado (R$)": totalAcumulado.toFixed(2)
+            };
+        });
+
+        const ws = XLSX.utils.json_to_sheet(dataForSheet);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Rota Fluxomed");
+        XLSX.writeFile(wb, "Rota_Visitas_Fluxomed.xlsx");
+    }
+
+    function clearAll() {
+        document.getElementById('address-container').innerHTML = `
+            <div class="input-group"><input type="text" placeholder="Ponto de Partida" class="address-input"><div class="autocomplete-list"></div></div>
+            <div class="input-group"><input type="text" placeholder="Destino 1" class="address-input"><div class="autocomplete-list"></div></div>
+        `;
+        document.querySelectorAll('.address-input').forEach(initAutocomplete);
+        document.getElementById('btn-excel').style.display = 'none';
+    }
+
+    function closeModal() {
+        document.getElementById('overlay').style.display = 'none';
+        document.getElementById('modal').style.display = 'none';
+    }
+
+    // Inicia os primeiros inputs
+    document.querySelectorAll('.address-input').forEach(initAutocomplete);
 </script>
 
 </body>
 </html>
-
-
-
-
-
-
-
-
-
