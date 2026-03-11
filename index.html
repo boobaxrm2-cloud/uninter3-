@@ -6,6 +6,9 @@
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://unpkg.com/leaflet-image/leaflet-image.js"></script>
+
 <style>
 
 body{
@@ -34,11 +37,6 @@ background:#111827;
 padding:25px;
 box-shadow:5px 0 40px rgba(0,0,0,0.6);
 z-index:1000;
-border-right:2px solid transparent;
-background-image:linear-gradient(#111827,#111827),
-linear-gradient(180deg,#1d4ed8,#38bdf8);
-background-origin:border-box;
-background-clip:padding-box,border-box;
 }
 
 .title{
@@ -50,7 +48,7 @@ color:#38bdf8;
 
 input{
 width:100%;
-padding:12px;
+padding:10px;
 margin-top:10px;
 background:#0b0f1a;
 border:1px solid #1f2937;
@@ -60,42 +58,25 @@ border-radius:8px;
 
 button{
 width:100%;
-padding:12px;
-margin-top:12px;
+padding:10px;
+margin-top:10px;
 border:none;
 border-radius:8px;
 cursor:pointer;
 font-weight:bold;
 }
 
-.add{
-background:#1d4ed8;
-color:white;
-}
-
-.route{
-background:#22c55e;
-color:white;
-}
-
-.delete{
-background:#ef4444;
-color:white;
-}
+.add{background:#2563eb;color:white;}
+.route{background:#22c55e;color:white;}
+.delete{background:#ef4444;color:white;}
+.clear{background:#f59e0b;color:white;}
 
 .address{
-margin-top:10px;
+margin-top:8px;
 }
 
 .switch{
-display:flex;
-align-items:center;
-margin-top:15px;
-}
-
-.switch input{
-width:20px;
-margin-right:10px;
+margin-top:10px;
 }
 
 .loading{
@@ -103,8 +84,8 @@ position:absolute;
 top:50%;
 left:50%;
 transform:translate(-50%,-50%);
-background:#000000c9;
-padding:40px;
+background:#000c;
+padding:30px;
 border-radius:10px;
 display:none;
 z-index:2000;
@@ -131,35 +112,11 @@ top:50%;
 left:50%;
 transform:translate(-50%,-50%);
 background:#111827;
-padding:30px;
+padding:25px;
 border-radius:10px;
-box-shadow:0 0 30px rgba(0,0,0,0.7);
 display:none;
 z-index:3000;
-text-align:center;
-}
-
-.autocomplete{
-position:relative;
-}
-
-.suggestions{
-position:absolute;
-background:#1f2937;
-width:100%;
-max-height:150px;
-overflow:auto;
-border-radius:5px;
-z-index:2000;
-}
-
-.suggestions div{
-padding:10px;
-cursor:pointer;
-}
-
-.suggestions div:hover{
-background:#374151;
+width:350px;
 }
 
 </style>
@@ -172,7 +129,7 @@ background:#374151;
 <div class="title">ROTEIRIZADOR DE VISITAS FLUXOMED</div>
 
 <label>Técnico</label>
-<input id="tecnico" placeholder="Nome do técnico">
+<input id="tecnico">
 
 <div id="addresses"></div>
 
@@ -180,9 +137,10 @@ background:#374151;
 
 <button class="delete" onclick="removeAddress()">Excluir último endereço</button>
 
+<button class="clear" onclick="clearRoutes()">Limpar rotas</button>
+
 <div class="switch">
-<input type="checkbox" id="almoco">
-<label>Incluir almoço (R$25,90)</label>
+<input type="checkbox" id="almoco"> Incluir almoço (R$25,90)
 </div>
 
 <button class="route" onclick="calcularRota()">Roteirizar rota</button>
@@ -206,76 +164,73 @@ const apiKey="eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6IjBkNDRmZDJkNm
 
 let map=L.map('map').setView([-22.9,-43.2],11)
 
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
-maxZoom:19
-}).addTo(map)
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map)
 
-let markers=[]
 let coords=[]
-let rotaLayer
+let markers=[]
+let addresses=[]
+let rotaLayer=null
 
 function addAddress(){
 
-let div=document.createElement("div")
-div.className="address autocomplete"
+let input=document.createElement("input")
+input.placeholder="Digite endereço"
 
-div.innerHTML=`
-<input placeholder="Digite endereço">
-<div class="suggestions"></div>
-`
+input.addEventListener("change",async ()=>{
 
-document.getElementById("addresses").appendChild(div)
-
-let input=div.querySelector("input")
-let suggestions=div.querySelector(".suggestions")
-
-input.addEventListener("input",async ()=>{
-
-let q=input.value
-
-if(q.length<3) return
-
-let res=await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${q}`)
+let res=await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${input.value}`)
 let data=await res.json()
 
-suggestions.innerHTML=""
+if(data.length>0){
 
-data.slice(0,5).forEach(place=>{
+let lat=data[0].lat
+let lon=data[0].lon
 
-let item=document.createElement("div")
-item.innerText=place.display_name
+coords.push([lon,lat])
+addresses.push(input.value)
 
-item.onclick=()=>{
-
-input.value=place.display_name
-
-coords.push([place.lon,place.lat])
-
-let marker=L.marker([place.lat,place.lon]).addTo(map)
+let marker=L.marker([lat,lon]).addTo(map)
 
 markers.push(marker)
 
-map.setView([place.lat,place.lon],13)
-
-suggestions.innerHTML=""
+map.setView([lat,lon],13)
 
 }
 
-suggestions.appendChild(item)
-
 })
 
-})
+document.getElementById("addresses").appendChild(input)
 
 }
 
 function removeAddress(){
 
-let list=document.getElementById("addresses")
+if(markers.length==0)return
 
-if(list.lastChild){
+let marker=markers.pop()
+map.removeLayer(marker)
+
+coords.pop()
+addresses.pop()
+
+let list=document.getElementById("addresses")
 list.removeChild(list.lastChild)
+
 }
+
+function clearRoutes(){
+
+markers.forEach(m=>map.removeLayer(m))
+
+markers=[]
+coords=[]
+addresses=[]
+
+if(rotaLayer){
+map.removeLayer(rotaLayer)
+}
+
+document.getElementById("addresses").innerHTML=""
 
 }
 
@@ -288,17 +243,13 @@ return
 
 document.getElementById("loading").style.display="block"
 
-let body={
-coordinates:coords
-}
-
 let res=await fetch("https://api.openrouteservice.org/v2/directions/driving-car",{
 method:"POST",
 headers:{
 "Content-Type":"application/json",
 "Authorization":apiKey
 },
-body:JSON.stringify(body)
+body:JSON.stringify({coordinates:coords})
 })
 
 let data=await res.json()
@@ -311,27 +262,25 @@ let valor=km*0.85
 
 let almoco=document.getElementById("almoco").checked
 
-if(almoco){
-valor+=25.90
-}
+if(almoco) valor+=25.90
 
-let resultado=`
-<h2>Resultado da Rota</h2>
-<p>Kilometragem: ${km.toFixed(2)} km</p>
-<p>Valor KM: R$0,85</p>
-<p>Almoço: ${almoco?"R$25,90":"Não incluído"}</p>
-<h3>Total: R$${valor.toFixed(2)}</h3>
+let html=`
+<h2>Resumo da rota</h2>
+<p><b>Kilometragem:</b> ${km.toFixed(2)} km</p>
+<p><b>Valor KM:</b> R$0,85</p>
+<p><b>Total:</b> R$${valor.toFixed(2)}</p>
+
+<button onclick="baixarPDF(${km},${valor})">Baixar PDF</button>
+
 <button onclick="fechar()">Fechar</button>
 `
 
-document.getElementById("resultado").innerHTML=resultado
+document.getElementById("resultado").innerHTML=html
 document.getElementById("resultado").style.display="block"
 
 let geo=data.routes[0].geometry
 
-if(rotaLayer){
-map.removeLayer(rotaLayer)
-}
+if(rotaLayer) map.removeLayer(rotaLayer)
 
 rotaLayer=L.geoJSON(geo,{
 style:{color:"#22c55e",weight:5}
@@ -343,6 +292,45 @@ function fechar(){
 document.getElementById("resultado").style.display="none"
 }
 
+function baixarPDF(km,total){
+
+leafletImage(map,function(err,canvas){
+
+let img=canvas.toDataURL("image/png")
+
+const {jsPDF}=window.jspdf
+
+let pdf=new jsPDF()
+
+let tecnico=document.getElementById("tecnico").value
+
+pdf.text("ROTEIRIZADOR DE VISITAS FLUXOMED",10,10)
+
+pdf.text("Técnico: "+tecnico,10,20)
+
+pdf.text("Endereços:",10,30)
+
+let y=40
+
+addresses.forEach((a,i)=>{
+
+pdf.text((i+1)+" - "+a,10,y)
+y+=8
+
+})
+
+pdf.text("Distância total: "+km.toFixed(2)+" km",10,y+10)
+
+pdf.text("Valor total: R$"+total.toFixed(2),10,y+18)
+
+pdf.addImage(img,"PNG",10,y+25,180,90)
+
+pdf.save("rota_fluxomed.pdf")
+
+})
+
+}
+
 addAddress()
 addAddress()
 
@@ -350,6 +338,7 @@ addAddress()
 
 </body>
 </html>
+
 
 
 
