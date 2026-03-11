@@ -14,107 +14,278 @@
 
 body{
 margin:0;
-font-family:Arial;
+font-family:Segoe UI,Arial;
 background:#0b0f19;
 color:white;
+overflow:hidden;
 }
+
+/* MAPA */
 
 #map{
 position:absolute;
 right:0;
 top:0;
 height:100%;
-width:70%;
+width:72%;
 }
 
+/* PAINEL */
+
 .panel{
+
 position:absolute;
 left:0;
 top:0;
 height:100%;
-width:30%;
+width:28%;
+
 background:#111827;
-padding:25px;
-overflow:auto;
+
+padding:30px;
+
+box-shadow: 15px 0px 40px rgba(0,0,0,0.6);
+border-right:1px solid rgba(255,255,255,0.05);
+
+z-index:10;
+}
+
+.panel::after{
+content:"";
+position:absolute;
+right:-40px;
+top:0;
+width:40px;
+height:100%;
+background:linear-gradient(to right,#111827,transparent);
 }
 
 h1{
+font-size:20px;
+margin-bottom:25px;
 color:#3b82f6;
+}
+
+label{
+font-size:13px;
+opacity:0.8;
 }
 
 input{
 width:100%;
-padding:10px;
-margin-bottom:5px;
+padding:12px;
+margin-top:5px;
+margin-bottom:12px;
 border:none;
-border-radius:6px;
+border-radius:8px;
 background:#1f2937;
+color:white;
+font-size:14px;
+}
+
+/* BOTÕES */
+
+button{
+
+width:100%;
+padding:12px;
+
+border:none;
+border-radius:8px;
+
+margin-top:10px;
+
+cursor:pointer;
+font-weight:600;
+transition:0.2s;
+
+}
+
+button:hover{
+transform:translateY(-1px);
+}
+
+.btn-add{
+background:#2563eb;
 color:white;
 }
 
-button{
-width:100%;
-padding:10px;
-border:none;
-border-radius:6px;
-margin-top:8px;
-cursor:pointer;
-font-weight:bold;
+.btn-route{
+background:#10b981;
 }
 
-.btn-add{background:#2563eb;color:white;}
-.btn-remove{background:#dc2626;color:white;}
-.btn-route{background:#10b981;color:white;}
-.btn-pdf{background:#9333ea;color:white;}
+.btn-pdf{
+background:#9333ea;
+}
+
+/* ENDEREÇOS */
 
 .address{
 position:relative;
-display:flex;
-gap:5px;
 }
 
+/* AUTOCOMPLETE */
+
 .suggestions{
+
 position:absolute;
-background:#1f2937;
-top:38px;
+top:46px;
 left:0;
-right:40px;
-z-index:999;
-border-radius:6px;
-max-height:150px;
+right:0;
+
+background:#1f2937;
+
+border-radius:8px;
+
+max-height:160px;
 overflow:auto;
+
+box-shadow:0px 10px 25px rgba(0,0,0,0.4);
+
+z-index:9999;
+
 }
 
 .suggestions div{
-padding:8px;
+
+padding:10px;
+font-size:13px;
+
 cursor:pointer;
+
+border-bottom:1px solid rgba(255,255,255,0.03);
+
 }
 
 .suggestions div:hover{
 background:#374151;
 }
 
-.marker-number{
-background:#2563eb;
-color:white;
+/* TOGGLE */
+
+.switch{
+
+position:relative;
+display:inline-block;
+width:46px;
+height:24px;
+margin-right:10px;
+
+}
+
+.switch input{
+opacity:0;
+width:0;
+height:0;
+}
+
+.slider{
+
+position:absolute;
+cursor:pointer;
+
+top:0;
+left:0;
+right:0;
+bottom:0;
+
+background:#374151;
+
+border-radius:24px;
+
+transition:.3s;
+
+}
+
+.slider:before{
+
+position:absolute;
+content:"";
+
+height:18px;
+width:18px;
+
+left:3px;
+bottom:3px;
+
+background:white;
+
 border-radius:50%;
-width:26px;
-height:26px;
+
+transition:.3s;
+
+}
+
+input:checked + .slider{
+background:#10b981;
+}
+
+input:checked + .slider:before{
+transform:translateX(22px);
+}
+
+.toggle-row{
+display:flex;
+align-items:center;
+margin-top:5px;
+}
+
+/* RESULTADO */
+
+#resultado{
+
+margin-top:20px;
+padding:12px;
+
+background:#1f2937;
+border-radius:8px;
+
+font-size:14px;
+line-height:1.6;
+
+}
+
+/* MARCADORES */
+
+.marker-number{
+
+background:#2563eb;
+
+color:white;
+
+border-radius:50%;
+
+width:28px;
+height:28px;
+
 display:flex;
 align-items:center;
 justify-content:center;
+
 font-weight:bold;
+
+box-shadow:0px 3px 10px rgba(0,0,0,0.4);
+
 }
 
 .loader{
+
 position:absolute;
 top:50%;
 left:50%;
+
 transform:translate(-50%,-50%);
-background:#111;
-padding:20px;
-border-radius:8px;
+
+background:#111827;
+
+padding:20px 30px;
+
+border-radius:10px;
+
 display:none;
+
+box-shadow:0px 0px 30px rgba(0,0,0,0.5);
+
 }
 
 </style>
@@ -133,12 +304,18 @@ display:none;
 
 <button class="btn-add" onclick="addEndereco()">Adicionar endereço</button>
 
-<label>
+<div class="toggle-row">
+
+<label class="switch">
 <input type="checkbox" id="almoco">
-Incluir almoço (R$25,90)
+<span class="slider"></span>
 </label>
 
-<button class="btn-route" onclick="roteirizar()">Roteirizar</button>
+<span>Incluir almoço (R$25,90)</span>
+
+</div>
+
+<button class="btn-route" onclick="roteirizar()">Roteirizar rota</button>
 
 <button class="btn-pdf" onclick="exportPDF()">Exportar PDF</button>
 
@@ -148,7 +325,7 @@ Incluir almoço (R$25,90)
 
 <div id="map"></div>
 
-<div class="loader" id="loader">Calculando rota...</div>
+<div id="loader" class="loader">Calculando rota...</div>
 
 <script>
 
@@ -158,8 +335,8 @@ let map=L.map('map').setView([-22.9,-43.2],11)
 
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map)
 
-let markers=[]
 let routeLayer=null
+let markers=[]
 let visitOrder=[]
 let totalDist=0
 
@@ -169,8 +346,7 @@ let div=document.createElement("div")
 div.className="address"
 
 div.innerHTML=`
-<input oninput="autocomplete(this)" placeholder="Digite endereço">
-<button class="btn-remove" onclick="this.parentElement.remove()">X</button>
+<input oninput="autocomplete(this)" placeholder="Digite endereço completo">
 <div class="suggestions"></div>
 `
 
@@ -185,28 +361,38 @@ async function autocomplete(input){
 
 let box=input.parentElement.querySelector(".suggestions")
 
-if(input.value.length<3){
+let text=input.value
+
+if(text.length<3){
+
 box.innerHTML=""
 return
+
 }
 
-let url=`https://api.openrouteservice.org/geocode/autocomplete?api_key=${API_KEY}&text=${input.value}`
+let url=`https://api.openrouteservice.org/geocode/autocomplete?api_key=${API_KEY}&text=${encodeURIComponent(text)}`
 
 let res=await fetch(url)
+
 let data=await res.json()
 
 box.innerHTML=""
 
-data.features.slice(0,5).forEach(place=>{
+data.features.slice(0,6).forEach(place=>{
 
 let div=document.createElement("div")
+
 div.innerText=place.properties.label
 
 div.onclick=()=>{
+
 input.value=place.properties.label
+
 input.dataset.lng=place.geometry.coordinates[0]
 input.dataset.lat=place.geometry.coordinates[1]
+
 box.innerHTML=""
+
 }
 
 box.appendChild(div)
@@ -221,43 +407,44 @@ document.getElementById("loader").style.display="block"
 
 let inputs=document.querySelectorAll("#enderecos input")
 
-let jobs=[]
 let coords=[]
+let jobs=[]
 
 inputs.forEach((input,i)=>{
 
 if(!input.dataset.lat) return
 
-coords.push([Number(input.dataset.lng),Number(input.dataset.lat)])
+let lng=Number(input.dataset.lng)
+let lat=Number(input.dataset.lat)
 
-jobs.push({
-id:i,
-location:[Number(input.dataset.lng),Number(input.dataset.lat)]
-})
+coords.push([lng,lat])
+
+jobs.push({id:i,location:[lng,lat]})
 
 })
 
 if(coords.length<2){
-alert("Adicione pelo menos 2 endereços")
-return
-}
 
-let body={
-jobs:jobs,
-vehicles:[{
-id:1,
-start:coords[0],
-end:coords[0]
-}]
+alert("Adicione pelo menos 2 endereços válidos")
+
+return
+
 }
 
 let opt=await fetch("https://api.openrouteservice.org/optimization",{
+
 method:"POST",
+
 headers:{
 Authorization:API_KEY,
 "Content-Type":"application/json"
 },
-body:JSON.stringify(body)
+
+body:JSON.stringify({
+jobs:jobs,
+vehicles:[{id:1,start:coords[0],end:coords[0]}]
+})
+
 })
 
 let optData=await opt.json()
@@ -271,14 +458,16 @@ if(step.type=="job") visitOrder.push(step.id)
 let orderedCoords=visitOrder.map(i=>coords[i])
 
 let route=await fetch("https://api.openrouteservice.org/v2/directions/driving-car",{
+
 method:"POST",
+
 headers:{
 Authorization:API_KEY,
 "Content-Type":"application/json"
 },
-body:JSON.stringify({
-coordinates:orderedCoords
-})
+
+body:JSON.stringify({coordinates:orderedCoords})
+
 })
 
 let routeData=await route.json()
@@ -331,9 +520,9 @@ let almoco=document.getElementById("almoco").checked?25.90:0
 let total=valor+almoco
 
 document.getElementById("resultado").innerHTML=`
-Distância: ${totalDist.toFixed(2)} km<br>
+Distância: <b>${totalDist.toFixed(2)} km</b><br>
 Valor km: R$ ${valor.toFixed(2)}<br>
-Total: R$ ${total.toFixed(2)}
+Total: <b>R$ ${total.toFixed(2)}</b>
 `
 
 }
@@ -390,24 +579,9 @@ pdf.text("ROTEIRIZADOR DE VISITAS FLUXOMED",10,10)
 
 pdf.addImage(img,"PNG",10,20,190,100)
 
-let y=130
+pdf.text("Técnico: "+document.getElementById("tecnico").value,10,130)
 
-pdf.text("Técnico: "+document.getElementById("tecnico").value,10,y)
-
-y+=10
-
-pdf.text("Distância: "+totalDist.toFixed(2)+" km",10,y)
-
-y+=10
-
-pdf.text("Visitas:",10,y)
-
-y+=10
-
-visitOrder.forEach((v,i)=>{
-pdf.text((i+1)+" - Visita "+(v+1),10,y)
-y+=8
-})
+pdf.text("Distância: "+totalDist.toFixed(2)+" km",10,140)
 
 pdf.save("rota_fluxomed.pdf")
 
@@ -417,5 +591,6 @@ pdf.save("rota_fluxomed.pdf")
 
 </body>
 </html>
+
 
 
