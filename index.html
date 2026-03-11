@@ -6,286 +6,160 @@
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
 
-<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-
 <style>
 
 body{
 margin:0;
-font-family:Segoe UI,Arial;
-background:#0b0f19;
+font-family:Arial;
+background:#0b0f1a;
 color:white;
 overflow:hidden;
 }
-
-/* MAPA */
 
 #map{
 position:absolute;
 right:0;
 top:0;
-height:100%;
 width:72%;
+height:100%;
 }
 
-/* PAINEL */
-
 .panel{
-
 position:absolute;
 left:0;
 top:0;
-height:100%;
 width:28%;
-
-background:#111827;
-
-padding:30px;
-
-box-shadow: 15px 0px 40px rgba(0,0,0,0.6);
-border-right:1px solid rgba(255,255,255,0.05);
-
-z-index:10;
-}
-
-.panel::after{
-content:"";
-position:absolute;
-right:-40px;
-top:0;
-width:40px;
 height:100%;
-background:linear-gradient(to right,#111827,transparent);
+background:#111827;
+padding:25px;
+box-shadow:5px 0 40px rgba(0,0,0,0.6);
+z-index:1000;
+border-right:2px solid transparent;
+background-image:linear-gradient(#111827,#111827),
+linear-gradient(180deg,#1d4ed8,#38bdf8);
+background-origin:border-box;
+background-clip:padding-box,border-box;
 }
 
-h1{
-font-size:20px;
-margin-bottom:25px;
-color:#3b82f6;
-}
-
-label{
-font-size:13px;
-opacity:0.8;
+.title{
+font-size:22px;
+font-weight:bold;
+margin-bottom:20px;
+color:#38bdf8;
 }
 
 input{
 width:100%;
 padding:12px;
-margin-top:5px;
-margin-bottom:12px;
-border:none;
-border-radius:8px;
-background:#1f2937;
+margin-top:10px;
+background:#0b0f1a;
+border:1px solid #1f2937;
 color:white;
-font-size:14px;
+border-radius:8px;
 }
-
-/* BOTÕES */
 
 button{
-
 width:100%;
 padding:12px;
-
+margin-top:12px;
 border:none;
 border-radius:8px;
-
-margin-top:10px;
-
 cursor:pointer;
-font-weight:600;
-transition:0.2s;
-
+font-weight:bold;
 }
 
-button:hover{
-transform:translateY(-1px);
-}
-
-.btn-add{
-background:#2563eb;
+.add{
+background:#1d4ed8;
 color:white;
 }
 
-.btn-route{
-background:#10b981;
+.route{
+background:#22c55e;
+color:white;
 }
 
-.btn-pdf{
-background:#9333ea;
+.delete{
+background:#ef4444;
+color:white;
 }
-
-/* ENDEREÇOS */
 
 .address{
+margin-top:10px;
+}
+
+.switch{
+display:flex;
+align-items:center;
+margin-top:15px;
+}
+
+.switch input{
+width:20px;
+margin-right:10px;
+}
+
+.loading{
+position:absolute;
+top:50%;
+left:50%;
+transform:translate(-50%,-50%);
+background:#000000c9;
+padding:40px;
+border-radius:10px;
+display:none;
+z-index:2000;
+}
+
+.spinner{
+border:5px solid #1f2937;
+border-top:5px solid #38bdf8;
+border-radius:50%;
+width:40px;
+height:40px;
+animation:spin 1s linear infinite;
+margin:auto;
+}
+
+@keyframes spin{
+0%{transform:rotate(0deg);}
+100%{transform:rotate(360deg);}
+}
+
+.result{
+position:absolute;
+top:50%;
+left:50%;
+transform:translate(-50%,-50%);
+background:#111827;
+padding:30px;
+border-radius:10px;
+box-shadow:0 0 30px rgba(0,0,0,0.7);
+display:none;
+z-index:3000;
+text-align:center;
+}
+
+.autocomplete{
 position:relative;
 }
 
-/* AUTOCOMPLETE */
-
 .suggestions{
-
 position:absolute;
-top:46px;
-left:0;
-right:0;
-
 background:#1f2937;
-
-border-radius:8px;
-
-max-height:160px;
+width:100%;
+max-height:150px;
 overflow:auto;
-
-box-shadow:0px 10px 25px rgba(0,0,0,0.4);
-
-z-index:9999;
-
+border-radius:5px;
+z-index:2000;
 }
 
 .suggestions div{
-
 padding:10px;
-font-size:13px;
-
 cursor:pointer;
-
-border-bottom:1px solid rgba(255,255,255,0.03);
-
 }
 
 .suggestions div:hover{
 background:#374151;
-}
-
-/* TOGGLE */
-
-.switch{
-
-position:relative;
-display:inline-block;
-width:46px;
-height:24px;
-margin-right:10px;
-
-}
-
-.switch input{
-opacity:0;
-width:0;
-height:0;
-}
-
-.slider{
-
-position:absolute;
-cursor:pointer;
-
-top:0;
-left:0;
-right:0;
-bottom:0;
-
-background:#374151;
-
-border-radius:24px;
-
-transition:.3s;
-
-}
-
-.slider:before{
-
-position:absolute;
-content:"";
-
-height:18px;
-width:18px;
-
-left:3px;
-bottom:3px;
-
-background:white;
-
-border-radius:50%;
-
-transition:.3s;
-
-}
-
-input:checked + .slider{
-background:#10b981;
-}
-
-input:checked + .slider:before{
-transform:translateX(22px);
-}
-
-.toggle-row{
-display:flex;
-align-items:center;
-margin-top:5px;
-}
-
-/* RESULTADO */
-
-#resultado{
-
-margin-top:20px;
-padding:12px;
-
-background:#1f2937;
-border-radius:8px;
-
-font-size:14px;
-line-height:1.6;
-
-}
-
-/* MARCADORES */
-
-.marker-number{
-
-background:#2563eb;
-
-color:white;
-
-border-radius:50%;
-
-width:28px;
-height:28px;
-
-display:flex;
-align-items:center;
-justify-content:center;
-
-font-weight:bold;
-
-box-shadow:0px 3px 10px rgba(0,0,0,0.4);
-
-}
-
-.loader{
-
-position:absolute;
-top:50%;
-left:50%;
-
-transform:translate(-50%,-50%);
-
-background:#111827;
-
-padding:20px 30px;
-
-border-radius:10px;
-
-display:none;
-
-box-shadow:0px 0px 30px rgba(0,0,0,0.5);
-
 }
 
 </style>
@@ -295,302 +169,188 @@ box-shadow:0px 0px 30px rgba(0,0,0,0.5);
 
 <div class="panel">
 
-<h1>ROTEIRIZADOR DE VISITAS FLUXOMED</h1>
+<div class="title">ROTEIRIZADOR DE VISITAS FLUXOMED</div>
 
 <label>Técnico</label>
-<input id="tecnico">
+<input id="tecnico" placeholder="Nome do técnico">
 
-<div id="enderecos"></div>
+<div id="addresses"></div>
 
-<button class="btn-add" onclick="addEndereco()">Adicionar endereço</button>
+<button class="add" onclick="addAddress()">Adicionar endereço</button>
 
-<div class="toggle-row">
+<button class="delete" onclick="removeAddress()">Excluir último endereço</button>
 
-<label class="switch">
+<div class="switch">
 <input type="checkbox" id="almoco">
-<span class="slider"></span>
-</label>
-
-<span>Incluir almoço (R$25,90)</span>
-
+<label>Incluir almoço (R$25,90)</label>
 </div>
 
-<button class="btn-route" onclick="roteirizar()">Roteirizar rota</button>
-
-<button class="btn-pdf" onclick="exportPDF()">Exportar PDF</button>
-
-<div id="resultado"></div>
+<button class="route" onclick="calcularRota()">Roteirizar rota</button>
 
 </div>
 
 <div id="map"></div>
 
-<div id="loader" class="loader">Calculando rota...</div>
+<div class="loading" id="loading">
+<div class="spinner"></div>
+<p>Calculando rota...</p>
+</div>
+
+<div class="result" id="resultado"></div>
+
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 
 <script>
 
-const API_KEY="eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6IjBkNDRmZDJkNmQzMTRkZWQ4YWYyZGIzODY1NzViNjA5IiwiaCI6Im11cm11cjY0In0="
+const apiKey="eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6IjBkNDRmZDJkNmQzMTRkZWQ4YWYyZGIzODY1NzViNjA5IiwiaCI6Im11cm11cjY0In0="
 
 let map=L.map('map').setView([-22.9,-43.2],11)
 
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map)
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
+maxZoom:19
+}).addTo(map)
 
-let routeLayer=null
 let markers=[]
-let visitOrder=[]
-let totalDist=0
+let coords=[]
+let rotaLayer
 
-function addEndereco(){
+function addAddress(){
 
 let div=document.createElement("div")
-div.className="address"
+div.className="address autocomplete"
 
 div.innerHTML=`
-<input oninput="autocomplete(this)" placeholder="Digite endereço completo">
+<input placeholder="Digite endereço">
 <div class="suggestions"></div>
 `
 
-document.getElementById("enderecos").appendChild(div)
+document.getElementById("addresses").appendChild(div)
 
-}
+let input=div.querySelector("input")
+let suggestions=div.querySelector(".suggestions")
 
-addEndereco()
-addEndereco()
+input.addEventListener("input",async ()=>{
 
-async function autocomplete(input){
+let q=input.value
 
-let box=input.parentElement.querySelector(".suggestions")
+if(q.length<3) return
 
-let text=input.value
-
-if(text.length<3){
-
-box.innerHTML=""
-return
-
-}
-
-let url=`https://api.openrouteservice.org/geocode/autocomplete?api_key=${API_KEY}&text=${encodeURIComponent(text)}`
-
-let res=await fetch(url)
-
+let res=await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${q}`)
 let data=await res.json()
 
-box.innerHTML=""
+suggestions.innerHTML=""
 
-data.features.slice(0,6).forEach(place=>{
+data.slice(0,5).forEach(place=>{
 
-let div=document.createElement("div")
+let item=document.createElement("div")
+item.innerText=place.display_name
 
-div.innerText=place.properties.label
+item.onclick=()=>{
 
-div.onclick=()=>{
+input.value=place.display_name
 
-input.value=place.properties.label
+coords.push([place.lon,place.lat])
 
-input.dataset.lng=place.geometry.coordinates[0]
-input.dataset.lat=place.geometry.coordinates[1]
-
-box.innerHTML=""
-
-}
-
-box.appendChild(div)
-
-})
-
-}
-
-async function roteirizar(){
-
-document.getElementById("loader").style.display="block"
-
-let inputs=document.querySelectorAll("#enderecos input")
-
-let coords=[]
-let jobs=[]
-
-inputs.forEach((input,i)=>{
-
-if(!input.dataset.lat) return
-
-let lng=Number(input.dataset.lng)
-let lat=Number(input.dataset.lat)
-
-coords.push([lng,lat])
-
-jobs.push({id:i,location:[lng,lat]})
-
-})
-
-if(coords.length<2){
-
-alert("Adicione pelo menos 2 endereços válidos")
-
-return
-
-}
-
-let opt=await fetch("https://api.openrouteservice.org/optimization",{
-
-method:"POST",
-
-headers:{
-Authorization:API_KEY,
-"Content-Type":"application/json"
-},
-
-body:JSON.stringify({
-jobs:jobs,
-vehicles:[{id:1,start:coords[0],end:coords[0]}]
-})
-
-})
-
-let optData=await opt.json()
-
-visitOrder=[]
-
-optData.routes[0].steps.forEach(step=>{
-if(step.type=="job") visitOrder.push(step.id)
-})
-
-let orderedCoords=visitOrder.map(i=>coords[i])
-
-let route=await fetch("https://api.openrouteservice.org/v2/directions/driving-car",{
-
-method:"POST",
-
-headers:{
-Authorization:API_KEY,
-"Content-Type":"application/json"
-},
-
-body:JSON.stringify({coordinates:orderedCoords})
-
-})
-
-let routeData=await route.json()
-
-totalDist=routeData.routes[0].summary.distance/1000
-
-drawRoute(routeData.routes[0].geometry,orderedCoords)
-
-calcValor()
-
-document.getElementById("loader").style.display="none"
-
-}
-
-function drawRoute(geometry,coords){
-
-if(routeLayer) map.removeLayer(routeLayer)
-
-let decoded=decodePolyline(geometry)
-
-routeLayer=L.polyline(decoded,{color:"#3b82f6",weight:5}).addTo(map)
-
-markers.forEach(m=>map.removeLayer(m))
-markers=[]
-
-coords.forEach((c,i)=>{
-
-let icon=L.divIcon({
-className:"marker-number",
-html:i+1
-})
-
-let marker=L.marker([c[1],c[0]],{icon}).addTo(map)
+let marker=L.marker([place.lat,place.lon]).addTo(map)
 
 markers.push(marker)
 
+map.setView([place.lat,place.lon],13)
+
+suggestions.innerHTML=""
+
+}
+
+suggestions.appendChild(item)
+
 })
 
-map.fitBounds(routeLayer.getBounds())
+})
 
 }
 
-function calcValor(){
+function removeAddress(){
 
-let valorKm=0.85
-let valor=totalDist*valorKm
+let list=document.getElementById("addresses")
 
-let almoco=document.getElementById("almoco").checked?25.90:0
+if(list.lastChild){
+list.removeChild(list.lastChild)
+}
 
-let total=valor+almoco
+}
 
-document.getElementById("resultado").innerHTML=`
-Distância: <b>${totalDist.toFixed(2)} km</b><br>
-Valor km: R$ ${valor.toFixed(2)}<br>
-Total: <b>R$ ${total.toFixed(2)}</b>
+async function calcularRota(){
+
+if(coords.length<2){
+alert("Adicione pelo menos dois endereços")
+return
+}
+
+document.getElementById("loading").style.display="block"
+
+let body={
+coordinates:coords
+}
+
+let res=await fetch("https://api.openrouteservice.org/v2/directions/driving-car",{
+method:"POST",
+headers:{
+"Content-Type":"application/json",
+"Authorization":apiKey
+},
+body:JSON.stringify(body)
+})
+
+let data=await res.json()
+
+document.getElementById("loading").style.display="none"
+
+let km=data.routes[0].summary.distance/1000
+
+let valor=km*0.85
+
+let almoco=document.getElementById("almoco").checked
+
+if(almoco){
+valor+=25.90
+}
+
+let resultado=`
+<h2>Resultado da Rota</h2>
+<p>Kilometragem: ${km.toFixed(2)} km</p>
+<p>Valor KM: R$0,85</p>
+<p>Almoço: ${almoco?"R$25,90":"Não incluído"}</p>
+<h3>Total: R$${valor.toFixed(2)}</h3>
+<button onclick="fechar()">Fechar</button>
 `
 
+document.getElementById("resultado").innerHTML=resultado
+document.getElementById("resultado").style.display="block"
+
+let geo=data.routes[0].geometry
+
+if(rotaLayer){
+map.removeLayer(rotaLayer)
 }
 
-function decodePolyline(str,precision){
-
-let index=0,lat=0,lng=0,coordinates=[]
-precision=Math.pow(10,precision||5)
-
-while(index<str.length){
-
-let b,shift=0,result=0
-
-do{
-b=str.charCodeAt(index++)-63
-result|=(b&0x1f)<<shift
-shift+=5
-}while(b>=0x20)
-
-let dlat=((result&1)?~(result>>1):(result>>1))
-lat+=dlat
-
-shift=0
-result=0
-
-do{
-b=str.charCodeAt(index++)-63
-result|=(b&0x1f)<<shift
-shift+=5
-}while(b>=0x20)
-
-let dlng=((result&1)?~(result>>1):(result>>1))
-lng+=dlng
-
-coordinates.push([lat/precision,lng/precision])
+rotaLayer=L.geoJSON(geo,{
+style:{color:"#22c55e",weight:5}
+}).addTo(map)
 
 }
 
-return coordinates
-
+function fechar(){
+document.getElementById("resultado").style.display="none"
 }
 
-async function exportPDF(){
-
-const {jsPDF}=window.jspdf
-
-let canvas=await html2canvas(document.getElementById("map"))
-
-let img=canvas.toDataURL("image/png")
-
-let pdf=new jsPDF()
-
-pdf.text("ROTEIRIZADOR DE VISITAS FLUXOMED",10,10)
-
-pdf.addImage(img,"PNG",10,20,190,100)
-
-pdf.text("Técnico: "+document.getElementById("tecnico").value,10,130)
-
-pdf.text("Distância: "+totalDist.toFixed(2)+" km",10,140)
-
-pdf.save("rota_fluxomed.pdf")
-
-}
+addAddress()
+addAddress()
 
 </script>
 
 </body>
 </html>
+
 
 
 
