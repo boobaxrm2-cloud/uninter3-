@@ -1,137 +1,130 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-br">
 <head>
 <meta charset="UTF-8">
-<title>ROTEIRIZADOR DE VISITAS FLUXOMED</title>
-
-<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
-
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="https://unpkg.com/leaflet-image/leaflet-image.js"></script>
+<title>Para Raissa ❤️</title>
 
 <style>
 
 body{
 margin:0;
-font-family:Arial;
-background:#0b0f1a;
+font-family:Arial, Helvetica, sans-serif;
+background:linear-gradient(135deg,#ff7eb3,#ff758c,#ff9a9e);
 color:white;
+text-align:center;
+overflow-x:hidden;
+}
+
+/* CORAÇÕES */
+
+.hearts{
+position:fixed;
+width:100%;
+height:100%;
+top:0;
+left:0;
+pointer-events:none;
 overflow:hidden;
 }
 
-#map{
+.heart{
 position:absolute;
-right:0;
-top:0;
-width:72%;
-height:100%;
+bottom:-50px;
+font-size:20px;
+animation:float 8s linear infinite;
+opacity:0.7;
 }
 
-.panel{
-position:absolute;
-left:0;
-top:0;
-width:28%;
-height:100%;
-background:#111827;
-padding:25px;
-box-shadow:5px 0 40px rgba(0,0,0,0.6);
-z-index:1000;
+@keyframes float{
+0%{transform:translateY(0) scale(1);opacity:0;}
+10%{opacity:1;}
+100%{transform:translateY(-110vh) scale(1.5);opacity:0;}
 }
 
-.title{
-font-size:22px;
-font-weight:bold;
-margin-bottom:20px;
-color:#38bdf8;
+/* TITULOS */
+
+h1{
+margin-top:40px;
+font-size:40px;
 }
 
-input{
-width:100%;
-padding:10px;
+.counter{
+font-size:26px;
 margin-top:10px;
-background:#0b0f1a;
-border:1px solid #1f2937;
-color:white;
-border-radius:8px;
-}
-
-button{
-width:100%;
-padding:10px;
-margin-top:10px;
-border:none;
-border-radius:8px;
-cursor:pointer;
 font-weight:bold;
 }
 
-.add{background:#2563eb;color:white;}
-.route{background:#22c55e;color:white;}
-.delete{background:#ef4444;color:white;}
-.clear{background:#f59e0b;color:white;}
-
-.autocomplete{
-position:relative;
+.sub{
+margin-bottom:30px;
+font-size:18px;
+opacity:0.9;
 }
 
-.suggestions{
-position:absolute;
-background:#1f2937;
-width:100%;
-max-height:150px;
-overflow:auto;
-border-radius:5px;
-z-index:2000;
-}
+/* BOTÕES */
 
-.suggestions div{
-padding:8px;
-cursor:pointer;
-}
-
-.suggestions div:hover{
-background:#374151;
-}
-
-.loading{
-position:absolute;
-top:50%;
-left:50%;
-transform:translate(-50%,-50%);
-background:#000c;
+.grid{
+display:grid;
+grid-template-columns:repeat(auto-fill,minmax(70px,1fr));
+gap:10px;
 padding:30px;
-border-radius:10px;
-display:none;
-z-index:2000;
-}
-
-.spinner{
-border:5px solid #1f2937;
-border-top:5px solid #38bdf8;
-border-radius:50%;
-width:40px;
-height:40px;
-animation:spin 1s linear infinite;
+max-width:1200px;
 margin:auto;
 }
 
-@keyframes spin{
-0%{transform:rotate(0deg);}
-100%{transform:rotate(360deg);}
+button{
+background:white;
+color:#ff4b7d;
+border:none;
+border-radius:12px;
+padding:10px;
+font-weight:bold;
+cursor:pointer;
+transition:0.2s;
+box-shadow:0 4px 10px rgba(0,0,0,0.2);
 }
 
-.result{
-position:absolute;
-top:50%;
-left:50%;
-transform:translate(-50%,-50%);
-background:#111827;
-padding:25px;
-border-radius:10px;
+button:hover{
+transform:scale(1.1);
+background:#ffe6ef;
+}
+
+/* POPUP */
+
+.popup-bg{
+position:fixed;
+top:0;
+left:0;
+width:100%;
+height:100%;
+background:rgba(0,0,0,0.6);
 display:none;
-z-index:3000;
-width:350px;
+align-items:center;
+justify-content:center;
+}
+
+.popup{
+background:white;
+color:#333;
+padding:40px;
+border-radius:20px;
+max-width:400px;
+font-size:20px;
+animation:fade 0.3s;
+}
+
+.close{
+margin-top:20px;
+background:#ff4b7d;
+color:white;
+padding:10px 20px;
+border-radius:10px;
+border:none;
+cursor:pointer;
+}
+
+@keyframes fade{
+from{transform:scale(0.7);opacity:0;}
+to{transform:scale(1);opacity:1;}
 }
 
 </style>
@@ -139,227 +132,143 @@ width:350px;
 
 <body>
 
-<div class="panel">
+<div class="hearts" id="hearts"></div>
 
-<div class="title">ROTEIRIZADOR DE VISITAS FLUXOMED</div>
+<h1>💖 Jonas & Raissa 💖</h1>
 
-<label>Técnico</label>
-<input id="tecnico">
-
-<div id="addresses"></div>
-
-<button class="add" onclick="addAddress()">Adicionar endereço</button>
-<button class="delete" onclick="removeAddress()">Excluir último endereço</button>
-<button class="clear" onclick="clearRoutes()">Limpar rotas</button>
-
-<div style="margin-top:10px">
-<input type="checkbox" id="almoco"> Incluir almoço (R$25,90)
+<div class="counter">
+Estamos juntos há <span id="dias"></span> dias ❤️
 </div>
 
-<button class="route" onclick="calcularRota()">Roteirizar rota</button>
-
+<div class="sub">
+Cada botão representa um dia do nosso amor.
+Clique e descubra um motivo pelo qual Jonas ama você.
 </div>
 
-<div id="map"></div>
+<div class="grid" id="grid"></div>
 
-<div class="loading" id="loading">
-<div class="spinner"></div>
-<p>Calculando rota...</p>
+<div class="popup-bg" id="popupbg">
+<div class="popup">
+<div id="mensagem"></div>
+<br>
+<button class="close" onclick="fechar()">Fechar ❤️</button>
 </div>
-
-<div class="result" id="resultado"></div>
-
-<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+</div>
 
 <script>
 
-const apiKey="eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6IjBkNDRmZDJkNmQzMTRkZWQ4YWYyZGIzODY1NzViNjA5IiwiaCI6Im11cm11cjY0In0="
+/* CONTADOR DE DIAS */
 
-let map=L.map('map').setView([-22.9,-43.2],11)
+const inicio = new Date("2018-01-01")
+const hoje = new Date()
 
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map)
+const diff = hoje - inicio
 
-let coords=[]
-let markers=[]
-let addresses=[]
-let rotaLayer=null
+const dias = Math.floor(diff / (1000 * 60 * 60 * 24))
 
-function addAddress(){
+document.getElementById("dias").innerText = dias
 
-let container=document.createElement("div")
-container.className="autocomplete"
+/* FRASES */
 
-let input=document.createElement("input")
-input.placeholder="Digite endereço"
+const frases = [
 
-let suggestions=document.createElement("div")
-suggestions.className="suggestions"
+"Eu te amo porque seu sorriso ilumina meus dias.",
+"Eu te amo porque você faz minha vida mais feliz.",
+"Eu te amo porque ao seu lado tudo fica melhor.",
+"Eu te amo porque você é minha melhor amiga.",
+"Eu te amo porque seu abraço é meu lugar favorito.",
+"Eu te amo porque você é linda por dentro e por fora.",
+"Eu te amo porque você transforma dias comuns em especiais.",
+"Eu te amo porque você me faz querer ser uma pessoa melhor.",
+"Eu te amo porque sua voz acalma meu coração.",
+"Eu te amo porque cada momento com você vale a pena.",
 
-container.appendChild(input)
-container.appendChild(suggestions)
+"Eu te amo porque você é única no mundo.",
+"Eu te amo porque Deus colocou você na minha vida.",
+"Eu te amo porque você acredita em mim.",
+"Eu te amo porque você me faz rir.",
+"Eu te amo porque sua presença me traz paz.",
+"Eu te amo porque você é carinhosa.",
+"Eu te amo porque você é forte.",
+"Eu te amo porque você é incrível.",
+"Eu te amo porque você me entende.",
+"Eu te amo porque você é especial.",
 
-document.getElementById("addresses").appendChild(container)
+"Eu te amo porque você é a mulher da minha vida.",
+"Eu te amo porque você me faz sentir completo.",
+"Eu te amo porque você é meu sonho realizado.",
+"Eu te amo porque cada dia ao seu lado é um presente.",
+"Eu te amo porque você é maravilhosa.",
+"Eu te amo porque sua risada é perfeita.",
+"Eu te amo porque sua companhia é tudo que eu preciso.",
+"Eu te amo porque você é meu porto seguro.",
+"Eu te amo porque você é minha felicidade.",
+"Eu te amo porque você é minha Raissa. ❤️"
 
-input.addEventListener("input",async ()=>{
+]
 
-let q=input.value
+function gerarFrase(){
 
-if(q.length<3) return
+let f = frases[Math.floor(Math.random()*frases.length)]
 
-let res=await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${q}`)
-let data=await res.json()
-
-suggestions.innerHTML=""
-
-data.slice(0,5).forEach(place=>{
-
-let item=document.createElement("div")
-item.innerText=place.display_name
-
-item.onclick=()=>{
-
-input.value=place.display_name
-suggestions.innerHTML=""
-
-let lat=place.lat
-let lon=place.lon
-
-coords.push([lon,lat])
-addresses.push(place.display_name)
-
-let marker=L.marker([lat,lon]).addTo(map)
-
-markers.push(marker)
-
-map.setView([lat,lon],13)
+return f + "<br><br><b>Com amor, Jonas ❤️</b>"
 
 }
 
-suggestions.appendChild(item)
+function abrir(){
 
-})
-
-})
-
-}
-
-function removeAddress(){
-
-if(markers.length==0) return
-
-map.removeLayer(markers.pop())
-
-coords.pop()
-addresses.pop()
-
-let list=document.getElementById("addresses")
-list.removeChild(list.lastChild)
-
-}
-
-function clearRoutes(){
-
-markers.forEach(m=>map.removeLayer(m))
-
-markers=[]
-coords=[]
-addresses=[]
-
-if(rotaLayer) map.removeLayer(rotaLayer)
-
-document.getElementById("addresses").innerHTML=""
-
-}
-
-async function calcularRota(){
-
-if(coords.length<2){
-alert("Adicione pelo menos dois endereços")
-return
-}
-
-document.getElementById("loading").style.display="block"
-
-let res=await fetch("https://api.openrouteservice.org/v2/directions/driving-car",{
-method:"POST",
-headers:{
-"Content-Type":"application/json",
-"Authorization":apiKey
-},
-body:JSON.stringify({coordinates:coords})
-})
-
-let data=await res.json()
-
-document.getElementById("loading").style.display="none"
-
-let km=data.routes[0].summary.distance/1000
-
-let valor=km*0.85
-
-let almoco=document.getElementById("almoco").checked
-
-if(almoco) valor+=25.90
-
-let html=`
-<h2>Resumo da rota</h2>
-<p>Kilometragem: ${km.toFixed(2)} km</p>
-<p>Total: R$${valor.toFixed(2)}</p>
-
-<button onclick="baixarPDF(${km},${valor})">Baixar PDF</button>
-<button onclick="fechar()">Fechar</button>
-`
-
-document.getElementById("resultado").innerHTML=html
-document.getElementById("resultado").style.display="block"
-
-let geo=data.routes[0].geometry
-
-if(rotaLayer) map.removeLayer(rotaLayer)
-
-rotaLayer=L.geoJSON(geo,{style:{color:"#22c55e",weight:5}}).addTo(map)
+document.getElementById("mensagem").innerHTML = gerarFrase()
+document.getElementById("popupbg").style.display="flex"
 
 }
 
 function fechar(){
-document.getElementById("resultado").style.display="none"
-}
 
-function baixarPDF(km,total){
-
-leafletImage(map,function(err,canvas){
-
-let img=canvas.toDataURL("image/png")
-
-const {jsPDF}=window.jspdf
-
-let pdf=new jsPDF()
-
-let tecnico=document.getElementById("tecnico").value
-
-pdf.text("ROTEIRIZADOR FLUXOMED",10,10)
-pdf.text("Técnico: "+tecnico,10,20)
-
-let y=30
-
-addresses.forEach((a,i)=>{
-pdf.text((i+1)+" - "+a,10,y)
-y+=8
-})
-
-pdf.text("Distância: "+km.toFixed(2)+" km",10,y+10)
-pdf.text("Total: R$"+total.toFixed(2),10,y+18)
-
-pdf.addImage(img,"PNG",10,y+25,180,90)
-
-pdf.save("rota_fluxomed.pdf")
-
-})
+document.getElementById("popupbg").style.display="none"
 
 }
 
-addAddress()
-addAddress()
+/* BOTÕES DOS DIAS */
+
+const grid = document.getElementById("grid")
+
+for(let i=1;i<=2993;i++){
+
+let b = document.createElement("button")
+
+b.innerText=i
+
+b.onclick=abrir
+
+grid.appendChild(b)
+
+}
+
+/* CORAÇÕES */
+
+function criarCoracao(){
+
+const heart = document.createElement("div")
+
+heart.classList.add("heart")
+
+heart.innerHTML="❤️"
+
+heart.style.left = Math.random()*100 + "vw"
+
+heart.style.fontSize = (15 + Math.random()*30) + "px"
+
+heart.style.animationDuration = (6 + Math.random()*6) + "s"
+
+document.getElementById("hearts").appendChild(heart)
+
+setTimeout(()=>{
+heart.remove()
+},12000)
+
+}
+
+setInterval(criarCoracao,300)
 
 </script>
 
