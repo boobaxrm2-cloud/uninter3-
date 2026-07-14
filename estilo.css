@@ -1,9 +1,73 @@
-#painel-sobre{
-	margin-top: 20px;
+:root {
+  color-scheme: light;
+  font-family: "Trebuchet MS", "Segoe UI", sans-serif;
 }
 
-.titulo-clientes{
-	background-color: #0275D8;
-	padding: 10px;
-	
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  background:
+    radial-gradient(circle at top left, #ffd8e6 0, transparent 35%),
+    linear-gradient(135deg, #fff7fb 0%, #ffe5f0 45%, #ffd6a5 100%);
+  color: #6d2f4f;
+}
+
+.card {
+  width: min(92vw, 720px);
+  padding: 2.2rem;
+  border-radius: 28px;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 20px 50px rgba(155, 82, 129, 0.25);
+  text-align: center;
+  border: 3px solid #f5b7d3;
+}
+
+.sparkles {
+  font-size: 1.8rem;
+  margin-bottom: 0.5rem;
+}
+
+h1 {
+  margin: 0;
+  font-size: clamp(2rem, 4vw, 3.2rem);
+  text-transform: lowercase;
+  letter-spacing: 0.06em;
+}
+
+p {
+  margin: 0.8rem 0 1.3rem;
+  font-size: 1.05rem;
+}
+
+.emoji-row {
+  display: flex;
+  justify-content: center;
+  gap: 0.8rem;
+  flex-wrap: wrap;
+  font-size: 2rem;
+  margin-bottom: 1.2rem;
+}
+
+.sticker-area {
+  display: flex;
+  justify-content: center;
+  gap: 0.8rem;
+  flex-wrap: wrap;
+}
+
+.sticker {
+  width: 64px;
+  height: 64px;
+  display: grid;
+  place-items: center;
+  border-radius: 18px;
+  background: #fff1f7;
+  border: 2px dashed #f0a8c8;
+  font-size: 1.8rem;
 }
